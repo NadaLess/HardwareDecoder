@@ -23,7 +23,8 @@ public:
     HWDecoder(QObject * parent = nullptr);
     ~HWDecoder();
 
-    int init(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
+    bool init(AVCodecParameters* codecParameters);
+    bool open();
     void close();
     void flush();
 
@@ -41,6 +42,7 @@ protected:
     QtAV::VideoSurfaceInteropPtr m_surfaceInterop;
 
 private:
+    int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
     int decode(AVCodecContext *avctx, AVPacket *packet);
     void processStream(const QIODevice * buffer);
     void processFile(const QString & input);
@@ -49,11 +51,12 @@ private:
     virtual QtAV::VideoFrame createHWVideoFrame(const AVFrame * frame) = 0;
 
     AVHWDeviceType m_type;
-    AVBufferRef *hw_device_ctx;
-    static AVPixelFormat hw_pix_fmt;
+    AVBufferRef *m_hwDeviceCtx;
+    static AVPixelFormat m_hwPixFmt;
 
-    AVFormatContext *input_ctx = NULL;
-    AVCodecContext *decoder_ctx = NULL;
+    AVCodec *m_decoder;
+    AVFormatContext *m_inputCtx;
+    AVCodecContext *m_decoderCtx;
 
     QtAV::AVPlayer m_player;
     QFuture<void> m_processFuture;

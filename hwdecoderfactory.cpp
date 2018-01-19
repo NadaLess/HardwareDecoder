@@ -1,4 +1,5 @@
 #include "hwdecoderfactory.h"
+
 #if defined(Q_OS_WIN)
 #include "hwwindowsdecoder.h"
 #endif

@@ -31,9 +31,12 @@ struct ScopedAVPacketDeleter
     }
 };
 
-AVPixelFormat HWDecoder::hw_pix_fmt = AV_PIX_FMT_NONE;
+AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 
-HWDecoder::HWDecoder(QObject * parent): QObject(parent), hw_device_ctx(nullptr), m_zeroCopy(false)
+HWDecoder::HWDecoder(QObject * parent)
+    : QObject(parent), m_type(AV_HWDEVICE_TYPE_NONE),
+      m_hwDeviceCtx(nullptr), m_decoder(nullptr),
+      m_inputCtx(nullptr), m_decoderCtx(nullptr), m_zeroCopy(false)
 {
     m_zeroCopy = QtAV::ZeroCopyChecker::instance()->enabled();
     av_register_all();
@@ -46,37 +49,91 @@ HWDecoder::~HWDecoder()
     close();
 }
 
-int HWDecoder::init(AVCodecContext *ctx, const enum AVHWDeviceType type)
+bool HWDecoder::init(AVCodecParameters* codecParameters)
+{
+    m_type = av_hwdevice_find_type_by_name(m_deviceName.toStdString().c_str());
+    if (m_type == AV_HWDEVICE_TYPE_NONE) {
+        qWarning() << "Device type" << m_deviceName << "is not supported.";
+        qWarning() << "Available device types:";
+        while((m_type = av_hwdevice_iterate_types(m_type)) != AV_HWDEVICE_TYPE_NONE)
+            qWarning() << QString::fromStdString(av_hwdevice_get_type_name(m_type));
+        return false;
+    }
+
+    for (int i = 0;; i++) {
+        const AVCodecHWConfig *config = avcodec_get_hw_config(m_decoder, i);
+        if (!config) {
+            qWarning() << "Decoder" << QString::fromStdString(m_decoder->name)
+                       << "does not support device type"
+                       << QString::fromStdString(av_hwdevice_get_type_name(m_type));
+            return false;
+        }
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX &&
+                config->device_type == m_type) {
+            m_hwPixFmt = config->pix_fmt;
+            break;
+        }
+    }
+
+    if (!(m_decoderCtx = avcodec_alloc_context3(m_decoder))) {
+        return false;
+    }
+
+    if (avcodec_parameters_to_context(m_decoderCtx, codecParameters) < 0)
+        return false;
+
+    m_decoderCtx->get_format  = getFormat;
+    av_opt_set_int(m_decoderCtx, "refcounted_frames", 1, 0);
+
+    if (initHWContext(m_decoderCtx, m_type) < 0)
+        return false;
+
+    return true;
+}
+
+int HWDecoder::initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType type)
 {
     int err = 0;
 
-    if ((err = av_hwdevice_ctx_create(&hw_device_ctx, type,
+    if ((err = av_hwdevice_ctx_create(&m_hwDeviceCtx, type,
                                       NULL, NULL, 0)) < 0) {
         qWarning() << "Failed to create specified HW device.";
         return err;
     }
-    ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+    ctx->hw_device_ctx = av_buffer_ref(m_hwDeviceCtx);
 
     return err;
 }
 
+bool HWDecoder::open()
+{
+    if (m_decoder && m_decoderCtx
+            && avcodec_open2(m_decoderCtx, m_decoder, NULL) == 0) {
+        return true;
+    }
+
+    qWarning() << "Failed to open codec";
+    return false;
+}
+
+
 void HWDecoder::close()
 {
     sendFrame(QtAV::VideoFrame());
-    avcodec_free_context(&decoder_ctx);
-    avformat_close_input(&input_ctx);
-    av_buffer_unref(&hw_device_ctx);
+    avcodec_free_context(&m_decoderCtx);
+    avformat_close_input(&m_inputCtx);
+    av_buffer_unref(&m_hwDeviceCtx);
 
-    decoder_ctx = nullptr;
-    input_ctx = nullptr;
-    hw_device_ctx = nullptr;
+    m_decoderCtx = nullptr;
+    m_inputCtx = nullptr;
+    m_hwDeviceCtx = nullptr;
 }
 
 void HWDecoder::flush()
 {
-    if (decoder_ctx) {
+    if (m_decoderCtx) {
         QScopedPointer<AVPacket, ScopedAVPacketDeleter> packet(av_packet_alloc());
-        decode(decoder_ctx, packet.data());
+        decode(m_decoderCtx, packet.data());
     }
 }
 
@@ -87,7 +144,7 @@ enum AVPixelFormat HWDecoder::getFormat(AVCodecContext *ctx,
     const enum AVPixelFormat *p;
 
     for (p = pix_fmts; *p != -1; p++) {
-        if (*p == hw_pix_fmt)
+        if (*p == m_hwPixFmt)
             return *p;
     }
 
@@ -97,7 +154,6 @@ enum AVPixelFormat HWDecoder::getFormat(AVCodecContext *ctx,
 
 int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
 {
-    QScopedPointer<AVFrame, ScopedAVFrameDeleter> frame;
 
     int ret = avcodec_send_packet(avctx, packet);
     if (ret < 0) {
@@ -105,13 +161,13 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
         return ret;
     }
 
+    QScopedPointer<AVFrame, ScopedAVFrameDeleter> frame;
     while (ret >= 0) {
         frame.reset(av_frame_alloc());
 
         if (!frame.data()) {
-            qWarning() << "Can not alloc frame";
-            ret = AVERROR(ENOMEM);
-            return ret;
+            qWarning() << "Can not alloc frame to get decoded data!";
+            return AVERROR(ENOMEM);
         }
 
         ret = avcodec_receive_frame(avctx, frame.data());
@@ -123,8 +179,10 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
         }
 
         QtAV::VideoFrame videoFrame;
-        if (frame->format == hw_pix_fmt) {
+        if (frame->format == m_hwPixFmt) {
             videoFrame = createHWVideoFrame(frame.data());
+        } else {
+            qWarning() << "Sw decoded frame, not implemented";
         }
 
         sendFrame(videoFrame);
@@ -136,81 +194,43 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
 void HWDecoder::processFile(const QString & input)
 {
     int video_stream, ret;
-    AVStream *video = NULL;
-    AVCodec *decoder = NULL;
     AVPacket packet;
 
-    int i;
-
-    m_type = av_hwdevice_find_type_by_name(m_deviceName.toStdString().c_str());
-    if (m_type == AV_HWDEVICE_TYPE_NONE) {
-        qWarning() << "Device type" << m_deviceName << "is not supported.";
-        qWarning() << "Available device types:";
-        while((m_type = av_hwdevice_iterate_types(m_type)) != AV_HWDEVICE_TYPE_NONE)
-            qWarning() << QString::fromStdString(av_hwdevice_get_type_name(m_type));
-        return;
-    }
-
     /* open the input file */
-    if (avformat_open_input(&input_ctx, input.toStdString().c_str(), NULL, NULL) != 0) {
+    if (avformat_open_input(&m_inputCtx, input.toStdString().c_str(), NULL, NULL) != 0) {
         qWarning() << "Cannot open input file" << input;
         return;
     }
 
-    if (avformat_find_stream_info(input_ctx, NULL) < 0) {
+    if (avformat_find_stream_info(m_inputCtx, NULL) < 0) {
         qWarning() << "Cannot find input stream information.";
         return;
     }
 
     /* find the video stream information */
-    ret = av_find_best_stream(input_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &decoder, 0);
+    ret = av_find_best_stream(m_inputCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &m_decoder, 0);
     if (ret < 0) {
         qWarning() << "Cannot find a video stream in the input file";
         return;
     }
     video_stream = ret;
+    AVCodecParameters* codecParameters = m_inputCtx->streams[video_stream]->codecpar;
 
-    for (i = 0;; i++) {
-        const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, i);
-        if (!config) {
-            qWarning() << "Decoder" << QString::fromStdString(decoder->name)
-                       << "does not support device type"
-                       << QString::fromStdString(av_hwdevice_get_type_name(m_type));
-            return;
-        }
-        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX &&
-                config->device_type == m_type) {
-            hw_pix_fmt = config->pix_fmt;
-            break;
-        }
-    }
-
-    if (!(decoder_ctx = avcodec_alloc_context3(decoder))) {
+    if (!init(codecParameters)) {
         return;
     }
 
-    video = input_ctx->streams[video_stream];
-    if (avcodec_parameters_to_context(decoder_ctx, video->codecpar) < 0)
-        return;
-
-    decoder_ctx->get_format  = getFormat;
-    av_opt_set_int(decoder_ctx, "refcounted_frames", 1, 0);
-
-    if (init(decoder_ctx, m_type) < 0)
-        return;
-
-    if ((ret = avcodec_open2(decoder_ctx, decoder, NULL)) < 0) {
-        qWarning() << "Failed to open codec for stream" << video_stream;
+    if (!open()) {
         return;
     }
 
     //Decoding loop
     while (ret >= 0) {
-        if ((ret = av_read_frame(input_ctx, &packet)) < 0)
+        if ((ret = av_read_frame(m_inputCtx, &packet)) < 0)
             break;
 
         if (video_stream == packet.stream_index)
-            ret = decode(decoder_ctx, &packet);
+            ret = decode(m_decoderCtx, &packet);
 
         av_packet_unref(&packet);
     }
