@@ -6,6 +6,7 @@
 #include <QFuture>
 
 #include "videosource.h"
+#include "videoframe.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -33,21 +34,19 @@ public:
 
 Q_SIGNALS:
     void playerChanged();
-    void frameDecoded(const QtAV::VideoFrame & frame);
+    void frameDecoded(const VideoFrame & frame);
 
 protected:
     QString m_deviceName;
-    bool m_zeroCopy;
-    QtAV::VideoSurfaceInteropPtr m_surfaceInterop;
 
 private:
     int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
     int decode(AVCodecContext *avctx, AVPacket *packet);
     void processStream(const QIODevice * buffer);
     void processFile(const QString & input);
-    void sendFrame(const QtAV::VideoFrame & frame);
+    void sendFrame(const VideoFrame & frame);
 
-    virtual QtAV::VideoFrame createHWVideoFrame(const AVFrame * frame) = 0;
+    virtual VideoFrame createHWVideoFrame(const AVFrame * frame) = 0;
 
     AVHWDeviceType m_type;
     AVBufferRef *m_hwDeviceCtx;

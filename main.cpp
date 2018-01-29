@@ -1,6 +1,5 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QtAV/ZeroCopyChecker.h>
 #include "hwdecoderfactory.h"
 #include "videorenderer.h"
 
@@ -12,7 +11,6 @@ int main(int argc, char *argv[])
 #endif
 
     QGuiApplication app(argc, argv);
-    QtAV::ZeroCopyChecker::instance();
 
     QQmlApplicationEngine engine;
     qmlRegisterType<VideoFBORenderer>("VideoHW", 0, 1, "VideoRenderer");

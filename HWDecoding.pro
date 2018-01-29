@@ -18,7 +18,10 @@ SOURCES += main.cpp \
     hwdecoderfactory.cpp \
     videorenderer.cpp \
     framerenderer.cpp \
-    videosource.cpp
+    videosource.cpp \
+    videoframe.cpp \
+    surface.cpp \
+    surfaced3d9.cpp
 
 RESOURCES += qml.qrc
 
@@ -39,7 +42,10 @@ HEADERS += \
     hwdecoderfactory.h \
     videorenderer.h \
     framerenderer.h \
-    videosource.h
+    videosource.h \
+    videoframe.h \
+    surface.h \
+    surfaced3d9.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale

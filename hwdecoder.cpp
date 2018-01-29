@@ -10,9 +10,6 @@ extern "C" {
 
 #include <QByteArray>
 #include <QtConcurrent/QtConcurrent>
-#include <QtAV/VideoFrame.h>
-#include <QtAV/VideoRenderer.h>
-#include <QtAV/ZeroCopyChecker.h>
 #include <QDebug>
 
 struct ScopedAVFrameDeleter
@@ -36,9 +33,8 @@ AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 HWDecoder::HWDecoder(QObject * parent)
     : QObject(parent), m_type(AV_HWDEVICE_TYPE_NONE),
       m_hwDeviceCtx(nullptr), m_decoder(nullptr),
-      m_inputCtx(nullptr), m_decoderCtx(nullptr), m_zeroCopy(false)
+      m_inputCtx(nullptr), m_decoderCtx(nullptr)
 {
-    m_zeroCopy = QtAV::ZeroCopyChecker::instance()->enabled();
     av_register_all();
 }
 
@@ -119,7 +115,7 @@ bool HWDecoder::open()
 
 void HWDecoder::close()
 {
-    sendFrame(QtAV::VideoFrame());
+    //TODO: Clear frames
     avcodec_free_context(&m_decoderCtx);
     avformat_close_input(&m_inputCtx);
     av_buffer_unref(&m_hwDeviceCtx);
@@ -178,7 +174,7 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
             return ret;
         }
 
-        QtAV::VideoFrame videoFrame;
+        VideoFrame videoFrame;
         if (frame->format == m_hwPixFmt) {
             videoFrame = createHWVideoFrame(frame.data());
         } else {
@@ -252,13 +248,7 @@ QObject* HWDecoder::getPlayer() const
     return (QObject*)&m_videoSource;
 }
 
-void HWDecoder::sendFrame(const QtAV::VideoFrame &frame)
+void HWDecoder::sendFrame(const VideoFrame &frame)
 {
     Q_EMIT frameDecoded(frame);
-
-    //Send to local render
-    for(QtAV::VideoRenderer* output : m_videoSource.videoOutputs()) {
-        if (!output || !output->isAvailable()) continue;
-        output->receive(frame);
-    }
 }
