@@ -5,8 +5,7 @@
 #include <QFile>
 #include <QFuture>
 
-#include <QtAV/AVPlayer.h>
-#include <QtAV/SurfaceInterop.h>
+#include "videosource.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -58,9 +57,8 @@ private:
     AVFormatContext *m_inputCtx;
     AVCodecContext *m_decoderCtx;
 
-    QtAV::AVPlayer m_player;
+    VideoSource m_videoSource;
     QFuture<void> m_processFuture;
-
 };
 
 

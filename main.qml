@@ -5,7 +5,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
 import QtAV 1.6
 
-import Video 0.1
+import VideoHW 0.1
 
 Window {
     visible: true
@@ -15,10 +15,11 @@ Window {
     ColumnLayout {
         anchors.fill: parent
 
-        VideoOutput2 {
-            id: videoOut
+        VideoRenderer {
+            id: renderer
             anchors.left: parent.left
             anchors.right: parent.right
+            anchors.margins: 10
             Layout.fillHeight: true
 
             source: HWDecoder.source

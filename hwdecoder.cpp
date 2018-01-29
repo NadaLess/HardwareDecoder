@@ -249,7 +249,7 @@ void HWDecoder::decodeVideo(const QUrl &input)
 
 QObject* HWDecoder::getPlayer() const
 {
-    return (QObject*)&m_player;
+    return (QObject*)&m_videoSource;
 }
 
 void HWDecoder::sendFrame(const QtAV::VideoFrame &frame)
@@ -257,7 +257,7 @@ void HWDecoder::sendFrame(const QtAV::VideoFrame &frame)
     Q_EMIT frameDecoded(frame);
 
     //Send to local render
-    for(QtAV::VideoRenderer* output : m_player.videoOutputs()) {
+    for(QtAV::VideoRenderer* output : m_videoSource.videoOutputs()) {
         if (!output || !output->isAvailable()) continue;
         output->receive(frame);
     }

@@ -1,4 +1,4 @@
-QT += quick concurrent av
+QT += quick concurrent gui
 CONFIG += c++11
 
 # The following define makes your compiler emit warnings if you use
@@ -15,7 +15,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp \
     hwdecoder.cpp \
     hwwindowsdecoder.cpp \
-    hwdecoderfactory.cpp
+    hwdecoderfactory.cpp \
+    videorenderer.cpp \
+    framerenderer.cpp \
+    videosource.cpp
 
 RESOURCES += qml.qrc
 
@@ -33,7 +36,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     hwdecoder.h \
     hwwindowsdecoder.h \
-    hwdecoderfactory.h
+    hwdecoderfactory.h \
+    videorenderer.h \
+    framerenderer.h \
+    videosource.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale

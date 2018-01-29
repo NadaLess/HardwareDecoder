@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QtAV/ZeroCopyChecker.h>
 #include "hwdecoderfactory.h"
+#include "videorenderer.h"
 
 int main(int argc, char *argv[])
 {
@@ -14,7 +15,8 @@ int main(int argc, char *argv[])
     QtAV::ZeroCopyChecker::instance();
 
     QQmlApplicationEngine engine;
-    qmlRegisterSingletonType<HWDecoder>("Video", 0, 1, "HWDecoder", hwDecoderInstance);
+    qmlRegisterType<VideoFBORenderer>("VideoHW", 0, 1, "VideoRenderer");
+    qmlRegisterSingletonType<HWDecoder>("VideoHW", 0, 1, "HWDecoder", hwDecoderInstance);
 
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())
