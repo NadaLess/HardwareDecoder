@@ -16,7 +16,7 @@ extern "C" {
 class HWDecoder: public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QObject* source READ getPlayer NOTIFY playerChanged)
+    Q_PROPERTY(VideoSource* source READ getSource WRITE setSource NOTIFY sourceChanged)
 public:
     static enum AVPixelFormat getFormat(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 
@@ -30,10 +30,11 @@ public:
 
     Q_INVOKABLE void decodeVideo(const QUrl & input);
 
-    QObject* getPlayer() const;
+    VideoSource *getSource() const;
+    void setSource(VideoSource *source);
 
 Q_SIGNALS:
-    void playerChanged();
+    void sourceChanged();
     void frameDecoded(const VideoFrame & frame);
 
 protected:
@@ -56,7 +57,7 @@ private:
     AVFormatContext *m_inputCtx;
     AVCodecContext *m_decoderCtx;
 
-    VideoSource m_videoSource;
+    VideoSource* m_source;
     QFuture<void> m_processFuture;
 };
 

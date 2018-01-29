@@ -3,7 +3,6 @@ import QtQuick.Window 2.2
 import QtQuick.Controls 2.0
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
-import QtAV 1.6
 
 import VideoHW 0.1
 

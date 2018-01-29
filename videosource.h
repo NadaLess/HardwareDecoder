@@ -1,19 +1,20 @@
 #ifndef VIDEOSOURCE_H
 #define VIDEOSOURCE_H
 
-#include "videorenderer.h"
+#include <QObject>
+#include "videoframe.h"
 
-class VideoSource: QObject
+class VideoSource: public QObject
 {
     Q_OBJECT
 public:
     VideoSource(QObject * parent = nullptr);
 
 public Q_SLOTS:
-    void setFrame();
+    void setFrame(const VideoFrame & frame);
 
 Q_SIGNALS:
-    void frameReady();
+    void frameReady(const VideoFrame & frame);
 
 };
 

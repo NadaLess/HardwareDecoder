@@ -36,10 +36,13 @@ HWDecoder::HWDecoder(QObject * parent)
       m_inputCtx(nullptr), m_decoderCtx(nullptr)
 {
     av_register_all();
+    m_source = new VideoSource(this);
+    connect(this, &HWDecoder::frameDecoded, m_source, &VideoSource::setFrame);
 }
 
 HWDecoder::~HWDecoder()
 {
+    disconnect(m_source);
     m_processFuture.waitForFinished();
     flush();
     close();
@@ -243,12 +246,20 @@ void HWDecoder::decodeVideo(const QUrl &input)
     }
 }
 
-QObject* HWDecoder::getPlayer() const
-{
-    return (QObject*)&m_videoSource;
-}
-
 void HWDecoder::sendFrame(const VideoFrame &frame)
 {
     Q_EMIT frameDecoded(frame);
+}
+
+VideoSource *HWDecoder::getSource() const
+{
+    return m_source;
+}
+
+void HWDecoder::setSource(VideoSource *source)
+{
+    if (m_source != source) {
+        m_source = source;
+        Q_EMIT sourceChanged();
+    }
 }

@@ -13,8 +13,9 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
-    qmlRegisterType<VideoFBORenderer>("VideoHW", 0, 1, "VideoRenderer");
+    qmlRegisterUncreatableType<VideoSource>("VideoHW", 0, 1, "VideoSource", "C++ Created");
     qmlRegisterSingletonType<HWDecoder>("VideoHW", 0, 1, "HWDecoder", hwDecoderInstance);
+    qmlRegisterType<VideoFBORenderer>("VideoHW", 0, 1, "VideoRenderer");
 
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
     if (engine.rootObjects().isEmpty())

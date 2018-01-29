@@ -51,3 +51,8 @@ void FrameRenderer::unmap()
 void FrameRenderer::renderFrame()
 {
 }
+
+void FrameRenderer::setFrame(const VideoFrame &frame)
+{
+    m_frame = frame;
+}
