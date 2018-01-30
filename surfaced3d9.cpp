@@ -75,7 +75,7 @@ bool SurfaceD3D9::map(GLuint name)
 {
     if (m_d3d9Surface == nullptr) return false;
 
-    _initWGLFunctions();
+    if (!_initWGLFunctions()) return false;
 
     IDirect3DDevice9 * device = nullptr;
     if (FAILED(m_d3d9Surface->GetDevice(&device))) {
@@ -186,18 +186,18 @@ UINT SurfaceD3D9::height()
     return description.Height;
 }
 
-void SurfaceD3D9::_initWGLFunctions()
+bool SurfaceD3D9::_initWGLFunctions()
 {
-    if (_checkWGLFunctions()) return;
+    if (_checkWGLFunctions()) return false;
 
     QOpenGLContext * context = QOpenGLContext::currentContext();
-    if (context == nullptr) return;
+    if (context == nullptr) return false;
 
     QByteArray interopExtension("WGL_NV_DX_interop");
     QByteArray interop2Extension("WGL_NV_DX_interop2");
 
     if (!context->hasExtension(interopExtension) || !context->hasExtension(interop2Extension)) {
-        return;
+        return false;
     }
 
     wglDXOpenDeviceNV = (PFNWGLDXOPENDEVICENVPROC)context->getProcAddress("wglDXOpenDeviceNV");
@@ -212,6 +212,7 @@ void SurfaceD3D9::_initWGLFunctions()
     wglDXSetResourceShareHandleNV = (PFNWGLDXSETRESOURCESHAREHANDLENVPROC)context->getProcAddress("wglDXSetResourceShareHandleNV");
 
     wglDXObjectAccessNV = (PFNWGLDXOBJECTACCESSNVPROC)context->getProcAddress("wglDXObjectAccessNV");
+    return true;
 }
 
 void SurfaceD3D9::_resetWGLFunctions()

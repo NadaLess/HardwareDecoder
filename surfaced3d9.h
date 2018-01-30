@@ -35,7 +35,7 @@ public:
     virtual UINT height() override;
 
 private:
-    void _initWGLFunctions();
+    bool _initWGLFunctions();
     void _resetWGLFunctions();
     bool _checkWGLFunctions();
 
