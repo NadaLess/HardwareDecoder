@@ -4,7 +4,7 @@ VideoSource::VideoSource(QObject * parent) : QObject(parent)
 {
 }
 
-void VideoSource::setFrame(const VideoFrame & frame)
+void VideoSource::setFrame(VideoFramePtr frame)
 {
     Q_EMIT frameReady(frame);
 }

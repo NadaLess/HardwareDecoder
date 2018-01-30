@@ -1,10 +1,12 @@
 #ifndef SURFACE_H
 #define SURFACE_H
 
-class Surface
+#include <QObject>
+class Surface: public QObject
 {
+    Q_OBJECT
 public:
-    Surface();
+    Surface(QObject * parent = nullptr);
 };
 
 #endif // SURFACE_H

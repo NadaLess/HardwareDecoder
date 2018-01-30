@@ -177,7 +177,7 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
             return ret;
         }
 
-        VideoFrame videoFrame;
+        VideoFrame* videoFrame;
         if (frame->format == m_hwPixFmt) {
             videoFrame = createHWVideoFrame(frame.data());
         } else {
@@ -246,9 +246,10 @@ void HWDecoder::decodeVideo(const QUrl &input)
     }
 }
 
-void HWDecoder::sendFrame(const VideoFrame &frame)
+void HWDecoder::sendFrame(VideoFrame *frame)
 {
-    Q_EMIT frameDecoded(frame);
+    VideoFramePtr sharedFrame(frame);
+    Q_EMIT frameDecoded(sharedFrame);
 }
 
 VideoSource *HWDecoder::getSource() const

@@ -11,7 +11,7 @@ public:
 
     // HWDecoder interface
 private:
-    virtual VideoFrame createHWVideoFrame(const AVFrame *frame) override;
+    virtual VideoFrame* createHWVideoFrame(const AVFrame *frame) override;
 };
 
 #endif // HWWINDOWSDECODER_H

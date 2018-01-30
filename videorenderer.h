@@ -15,17 +15,17 @@ public:
     void setSource(VideoSource * source);
     VideoSource *source() const;
 
-    VideoFrame frame() const;
+    VideoFramePtr frame() const;
 
 Q_SIGNALS:
     void sourceChanged();
 
 private Q_SLOTS:
-    void onFrameReady(const VideoFrame & frame);
+    void onFrameReady(VideoFramePtr frame);
 
 private:
     VideoSource * m_source;
-    VideoFrame m_frame;
+    VideoFramePtr m_frame;
 };
 
 #endif // VIDEORENDERER_H

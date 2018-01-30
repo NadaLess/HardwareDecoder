@@ -11,10 +11,10 @@ public:
     VideoSource(QObject * parent = nullptr);
 
 public Q_SLOTS:
-    void setFrame(const VideoFrame & frame);
+    void setFrame(VideoFramePtr frame);
 
 Q_SIGNALS:
-    void frameReady(const VideoFrame & frame);
+    void frameReady(VideoFramePtr frame);
 
 };
 

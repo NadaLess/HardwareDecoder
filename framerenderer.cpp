@@ -9,6 +9,11 @@ void FrameRenderer::render()
 {
     glDepthMask(true);
 
+//    float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+//    float g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+//    float b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+//    glClearColor(r, g, b, 1.0f);
+
     glClearColor(0.f, 0.f, 0.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -52,7 +57,7 @@ void FrameRenderer::renderFrame()
 {
 }
 
-void FrameRenderer::setFrame(const VideoFrame &frame)
+void FrameRenderer::setFrame(VideoFramePtr frame)
 {
     m_frame = frame;
 }

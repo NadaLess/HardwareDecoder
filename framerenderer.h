@@ -14,7 +14,7 @@ public:
     void render();
     void initialize();
 
-    void setFrame(const VideoFrame &frame);
+    void setFrame(VideoFramePtr frame);
 
 private:
     virtual void map();
@@ -22,7 +22,7 @@ private:
     virtual void renderFrame();
 
     QTransform m_transformation;
-    VideoFrame m_frame;
+    VideoFramePtr m_frame;
 };
 
 #endif // FRAMERENDERER_H

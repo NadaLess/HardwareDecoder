@@ -14,7 +14,6 @@ public:
 
     void render() {
         m_frameRenderer.render();
-        update();
     }
 
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) {
@@ -68,12 +67,13 @@ VideoSource *VideoFBORenderer::source() const
     return m_source;
 }
 
-void VideoFBORenderer::onFrameReady(const VideoFrame &frame)
+void VideoFBORenderer::onFrameReady(VideoFramePtr frame)
 {
     m_frame = frame;
+    update();
 }
 
-VideoFrame VideoFBORenderer::frame() const
+VideoFramePtr VideoFBORenderer::frame() const
 {
     return m_frame;
 }

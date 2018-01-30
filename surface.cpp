@@ -1,6 +1,6 @@
 #include "surface.h"
 
-Surface::Surface()
+Surface::Surface(QObject * parent): QObject(parent)
 {
 
 }
