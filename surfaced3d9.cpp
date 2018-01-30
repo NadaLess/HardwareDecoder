@@ -83,6 +83,7 @@ bool SurfaceD3D9::map(GLuint name)
         return false;
     }
 
+    HANDLE share_handle = NULL;
     // required by d3d9 not d3d10&11: https://www.opengl.org/registry/specs/NV/DX_interop2.txt
     if (!wglDXSetResourceShareHandleNV(m_d3d9Surface, share_handle)) {
         qWarning() << Q_FUNC_INFO << "Error wglDXSetResourceShareHandleNV";
