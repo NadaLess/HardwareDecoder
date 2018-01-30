@@ -14,8 +14,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp \
     hwdecoder.cpp \
-    hwwindowsdecoder.cpp \
     hwdecoderfactory.cpp
+
+win32: SOURCES += hwwindowsdecoder.cpp
+
 
 RESOURCES += qml.qrc
 
@@ -32,8 +34,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     hwdecoder.h \
-    hwwindowsdecoder.h \
     hwdecoderfactory.h
+
+win32: HEADERS += hwwindowsdecoder.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
