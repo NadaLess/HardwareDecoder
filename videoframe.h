@@ -13,6 +13,12 @@ public:
     VideoFrame(Surface * surface, QObject * parent = nullptr);
     ~VideoFrame();
 
+    bool map(GLuint name);
+    void unmap();
+
+    UINT width();
+    UINT height();
+
 private:
     Surface * m_surface;
 

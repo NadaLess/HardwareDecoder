@@ -17,8 +17,6 @@ public:
     void setFrame(VideoFramePtr frame);
 
 private:
-    virtual void map();
-    virtual void unmap();
     virtual void renderFrame();
 
     QTransform m_transformation;

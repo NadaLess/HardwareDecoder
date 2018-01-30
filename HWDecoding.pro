@@ -1,4 +1,4 @@
-QT += quick concurrent gui
+QT += quick concurrent gui opengl
 CONFIG += c++11
 
 # The following define makes your compiler emit warnings if you use
@@ -12,6 +12,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+LIBS += -ldxgi
+LIBS += -ldxva2
+LIBS += -ld3d9
+LIBS += -ld3d11
+
 SOURCES += main.cpp \
     hwdecoder.cpp \
     hwwindowsdecoder.cpp \
@@ -20,7 +25,6 @@ SOURCES += main.cpp \
     framerenderer.cpp \
     videosource.cpp \
     videoframe.cpp \
-    surface.cpp \
     surfaced3d9.cpp
 
 RESOURCES += qml.qrc

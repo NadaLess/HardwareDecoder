@@ -24,3 +24,27 @@ void VideoFrame::registerMetaType()
         registered = true;
     }
 }
+
+bool VideoFrame::map(GLuint name)
+{
+    if (!m_surface) return false;
+    return m_surface->map(name);
+}
+
+void VideoFrame::unmap()
+{
+    if (!m_surface) return;
+    m_surface->unmap();
+}
+
+UINT VideoFrame::width()
+{
+    if (!m_surface) return 0;
+    return m_surface->width();
+}
+
+UINT VideoFrame::height()
+{
+    if (!m_surface) return 0;
+    return m_surface->height();
+}

@@ -36,7 +36,7 @@ protected:
 };
 
 VideoFBORenderer::VideoFBORenderer(QQuickItem *parent)
-    : QQuickFramebufferObject(parent), m_source(nullptr)
+    : QQuickFramebufferObject(parent), m_source(nullptr), m_frame(nullptr)
 {
 
 }
