@@ -14,7 +14,7 @@ public:
     virtual ~Surface() {}
 
     virtual bool map(GLuint name) = 0;
-    virtual void unmap() = 0;
+    virtual bool unmap() = 0;
 
     virtual UINT width() = 0;
     virtual UINT height() = 0;

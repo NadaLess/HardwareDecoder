@@ -19,13 +19,16 @@ LIBS += -ld3d11
 
 SOURCES += main.cpp \
     hwdecoder.cpp \
-    hwwindowsdecoder.cpp \
     hwdecoderfactory.cpp \
     videorenderer.cpp \
     framerenderer.cpp \
     videosource.cpp \
-    videoframe.cpp \
+    videoframe.cpp
+
+win32: SOURCES += hwwindowsdecoder.cpp \
     surfaced3d9.cpp
+
+
 
 RESOURCES += qml.qrc
 
@@ -42,13 +45,14 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     hwdecoder.h \
-    hwwindowsdecoder.h \
     hwdecoderfactory.h \
     videorenderer.h \
     framerenderer.h \
     videosource.h \
     videoframe.h \
-    surface.h \
+    surface.h
+
+win32: HEADERS += hwwindowsdecoder.h \
     surfaced3d9.h
 
 #Link with FFmpeg installed in Qt

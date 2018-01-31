@@ -1,14 +1,32 @@
 #include "surfaced3d9.h"
 #include <QDebug>
 
-SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface):
-    Surface()
-  , m_d3d9Surface(nullptr)
-  , m_interopDev(nullptr)
-  , m_interopObj(nullptr)
+SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface)
+    : Surface()
+    , dx_surface(nullptr)
+    , dx_texture(nullptr)
+    , sharedHandle(nullptr)
+    , gl_handleD3D(nullptr)
+    , gl_handle(nullptr)
 {
-    surface->AddRef();
-    m_d3d9Surface = surface;
+    if (surface == nullptr) return;
+
+    if (FAILED(surface->GetDevice(&dx_device))) {
+        qWarning() << Q_FUNC_INFO << "Error getting the Device from the Surface";
+        return;
+    }
+
+    surface->GetDesc(&surfaceDescriptor);
+
+    dx_device->CreateTexture(surfaceDescriptor.Width, surfaceDescriptor.Height, 1,
+                             D3DUSAGE_RENDERTARGET,
+                             D3DFMT_X8R8G8B8,
+                             D3DPOOL_DEFAULT,
+                             &dx_texture,
+                             &sharedHandle);
+
+    dx_texture->GetSurfaceLevel(0, &dx_surface);
+    dx_device->StretchRect(surface, NULL, dx_surface, NULL, D3DTEXF_NONE);
 
     _resetWGLFunctions();
 }
@@ -16,174 +34,68 @@ SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface):
 SurfaceD3D9::~SurfaceD3D9() {
     _resetWGLFunctions();
 
-    m_interopDev = nullptr;
-    m_interopObj = nullptr;
+    if (dx_surface)
+        dx_surface->Release();
+    dx_surface = nullptr;
 
-    if (m_d3d9Surface)
-        m_d3d9Surface->Release();
-    m_d3d9Surface = nullptr;
+    if (dx_texture)
+        dx_texture->Release();
+    dx_texture = nullptr;
+
+    gl_handleD3D = nullptr;
+    gl_handle = nullptr;
 }
-
-//    // register the Direct3D device with GL
-//    HANDLE gl_handleD3D;
-//    gl_handleD3D = wglDXOpenDeviceNV(device);
-
-//    // register the Direct3D color and depth/stencil buffers as
-//    // 2D multisample textures in opengl
-//    GLuint gl_names[2];
-//    HANDLE gl_handles[2];
-
-//    glGenTextures(2, gl_names);
-
-//    gl_handles[0] = wglDXRegisterObjectNV(gl_handleD3D,
-//                                          dxColorBuffer,
-//                                          gl_names[0],
-//            GL_TEXTURE_2D_MULTISAMPLE,
-//            WGL_ACCESS_READ_WRITE_NV);
-
-//    gl_handles[1] = wglDXRegisterObjectNV(gl_handleD3D,
-//                                          dxDepthBuffer,
-//                                          gl_names[1],
-//            GL_TEXTURE_2D_MULTISAMPLE,
-//            WGL_ACCESS_READ_WRITE_NV);
-
-//    // attach the Direct3D buffers to an FBO
-//    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-//                           GL_TEXTURE_2D_MULTISAMPLE, gl_names[0]);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-//                           GL_TEXTURE_2D_MULTISAMPLE, gl_names[1]);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
-//                           GL_TEXTURE_2D_MULTISAMPLE, gl_names[1]);
-
-//    // rendering loop
-//    while (!done) {
-//        // TODO : <direct3d renders to the render targets>
-
-//        // lock the render targets for GL access
-//        wglDXLockObjectsNV(gl_handleD3D, 2, gl_handles);
-
-//        // TODO : <opengl renders to the render targets>
-
-//        // unlock the render targets
-//        wglDXUnlockObjectsNV(gl_handleD3D, 2, gl_handles);
-
-//        // TODO : <direct3d renders to the render targets and presents the results on the screen>
-//    }
 
 bool SurfaceD3D9::map(GLuint name)
 {
-    if (m_d3d9Surface == nullptr) return false;
-
     if (!_initWGLFunctions()) return false;
 
-    IDirect3DDevice9 * device = nullptr;
-    if (FAILED(m_d3d9Surface->GetDevice(&device))) {
-        qWarning() << Q_FUNC_INFO << "Error getting the Device from the Surface";
-        return false;
-    }
+    if (dx_surface == nullptr) return false;
 
-    HANDLE share_handle = NULL;
     // required by d3d9 not d3d10&11: https://www.opengl.org/registry/specs/NV/DX_interop2.txt
-    if (!wglDXSetResourceShareHandleNV(m_d3d9Surface, share_handle)) {
-        qWarning() << Q_FUNC_INFO << "Error wglDXSetResourceShareHandleNV";
-        return false;
-    }
+    wglDXSetResourceShareHandleNV(dx_surface, sharedHandle);
 
     // register the Direct3D device with GL
-    m_interopDev = wglDXOpenDeviceNV(device);
-    if (m_interopDev == nullptr) {
-        qWarning() << Q_FUNC_INFO << "Error opening DX device";
+    gl_handleD3D = wglDXOpenDeviceNV(dx_device);
+    if (gl_handleD3D == NULL)
         return false;
-    }
 
-    // register the Direct3D as 2D multisample textures in opengl
-    m_interopObj = wglDXRegisterObjectNV(m_interopDev, m_d3d9Surface, name, GL_TEXTURE_2D, WGL_ACCESS_READ_ONLY_NV);
-    if (m_interopObj == nullptr) {
-        DWORD error = GetLastError();
-        if (error == ERROR_INVALID_HANDLE) qDebug() << "ERROR_INVALID_HANDLE";
-        else if (error == ERROR_INVALID_DATA) qDebug() << "ERROR_INVALID_DATA";
-        else if (error == ERROR_OPEN_FAILED) qDebug() << "ERROR_OPEN_FAILED";
-        else qDebug() << "UNKNOWN_ERROR";
-
-        qWarning() << Q_FUNC_INFO << "Error registering DX resources";
-        if (m_interopDev) {
-            wglDXCloseDeviceNV(m_interopDev);
-            m_interopDev = nullptr;
-        }
+    gl_handle = wglDXRegisterObjectNV(gl_handleD3D,
+                                      dx_surface,
+                                      name,
+                                      GL_TEXTURE_2D,
+                                      WGL_ACCESS_READ_ONLY_NV);
+    if (gl_handle == NULL)
         return false;
-    }
 
-    // The example attach the Direct3D buffers to an FBO - QtAV do nothing
+    bool lock = wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle);
+    bool objectAccess = wglDXObjectAccessNV(gl_handle, WGL_ACCESS_READ_ONLY_NV);
 
-    // lock dx resources
-    if (!wglDXLockObjectsNV(m_interopDev, 1, &m_interopObj)) {
-        qWarning() << Q_FUNC_INFO << "Error locking DX resources";
-
-        wglDXUnregisterObjectNV(m_interopDev, m_interopObj);
-        wglDXCloseDeviceNV(m_interopDev);
-
-        m_interopObj = NULL;
-        m_interopDev = NULL;
-
-        return false;
-    }
-
-    return true;
+    return lock && objectAccess;
 }
 
-void SurfaceD3D9::unmap()
+bool SurfaceD3D9::unmap()
 {
-    if (!m_interopObj || !m_interopDev || !_checkWGLFunctions())
-        return;
+    if (!_checkWGLFunctions()) return false;
 
-    wglDXUnlockObjectsNV(m_interopDev, 1, &m_interopObj);
-    wglDXUnregisterObjectNV(m_interopDev, m_interopObj);
-    // interop operations end
-    wglDXCloseDeviceNV(m_interopDev);
+    bool unlock = wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
+    bool unregister = wglDXUnregisterObjectNV(gl_handleD3D, gl_handle);
+    bool closeDevice = wglDXCloseDeviceNV(gl_handleD3D);
 
-    m_interopObj = NULL;
-    m_interopDev = NULL;
+    gl_handleD3D = NULL;
+    gl_handle = NULL;
 
-    return;
+    return unlock && unregister && closeDevice;
 }
 
 UINT SurfaceD3D9::width()
 {
-    if (m_d3d9Surface == nullptr) return 0;
-
-    IDirect3DDevice9 * device = nullptr;
-    if (FAILED(m_d3d9Surface->GetDevice(&device))) {
-        qWarning() << Q_FUNC_INFO << "Error getting the Device from the Surface";
-        return 0;
-    }
-
-    D3DSURFACE_DESC description;
-    if (FAILED(m_d3d9Surface->GetDesc(&description))) {
-        qWarning() << Q_FUNC_INFO << "Error getting the Device Description";
-        return 0;
-    }
-
-    return description.Width;
+    return surfaceDescriptor.Width;
 }
 
 UINT SurfaceD3D9::height()
 {
-    if (m_d3d9Surface == nullptr) return 0;
-
-    IDirect3DDevice9 * device = nullptr;
-    if (FAILED(m_d3d9Surface->GetDevice(&device))) {
-        qWarning() << Q_FUNC_INFO << "Error getting the Device from the Surface";
-        return 0;
-    }
-
-    D3DSURFACE_DESC description;
-    if (FAILED(m_d3d9Surface->GetDesc(&description))) {
-        qWarning() << Q_FUNC_INFO << "Error getting the Device Description";
-        return 0;
-    }
-
-    return description.Height;
+    return surfaceDescriptor.Height;
 }
 
 bool SurfaceD3D9::_initWGLFunctions()

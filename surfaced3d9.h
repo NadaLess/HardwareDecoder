@@ -30,7 +30,7 @@ public:
 
     // Surface interface
     virtual bool map(GLuint name) override;
-    virtual void unmap() override;
+    virtual bool unmap() override;
     virtual UINT width() override;
     virtual UINT height() override;
 
@@ -49,12 +49,17 @@ private:
     PFNWGLDXUNLOCKOBJECTSNVPROC wglDXUnlockObjectsNV;
 
     PFNWGLDXSETRESOURCESHAREHANDLENVPROC wglDXSetResourceShareHandleNV;
-
     PFNWGLDXOBJECTACCESSNVPROC wglDXObjectAccessNV;
 
-    IDirect3DSurface9 * m_d3d9Surface;
-    HANDLE m_interopDev;
-    HANDLE m_interopObj;
+    IDirect3DDevice9 *dx_device;
+    IDirect3DTexture9 *dx_texture;
+    IDirect3DSurface9 *dx_surface;
+    D3DSURFACE_DESC surfaceDescriptor;
+
+    //NV/DX Interop Handles
+    HANDLE sharedHandle;
+    HANDLE gl_handleD3D;
+    HANDLE gl_handle;
 };
 
 #endif // SURFACED3D9_H
