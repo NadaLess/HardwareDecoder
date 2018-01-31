@@ -106,9 +106,8 @@ bool SurfaceD3D9::_initWGLFunctions()
     if (context == nullptr) return false;
 
     QByteArray interopExtension("WGL_NV_DX_interop");
-    QByteArray interop2Extension("WGL_NV_DX_interop2");
 
-    if (!context->hasExtension(interopExtension) || !context->hasExtension(interop2Extension)) {
+    if (!context->hasExtension(interopExtension)) {
         return false;
     }
 
