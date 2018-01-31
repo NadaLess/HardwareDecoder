@@ -100,7 +100,7 @@ UINT SurfaceD3D9::height()
 
 bool SurfaceD3D9::_initWGLFunctions()
 {
-    if (_checkWGLFunctions()) return false;
+    if (_checkWGLFunctions()) return true;
 
     QOpenGLContext * context = QOpenGLContext::currentContext();
     if (context == nullptr) return false;
