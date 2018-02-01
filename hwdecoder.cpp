@@ -15,22 +15,7 @@ extern "C" {
 #include <QtAV/ZeroCopyChecker.h>
 #include <QDebug>
 
-struct ScopedAVFrameDeleter
-{
-    static inline void cleanup(void *pointer) {
-        if (pointer)
-            av_frame_free((AVFrame**)&pointer);
-    }
-};
-
-struct ScopedAVPacketDeleter
-{
-    static inline void cleanup(void *pointer) {
-        if (pointer)
-            av_packet_unref((AVPacket*)pointer);
-    }
-};
-
+QString HWDecoder::kSurfaceInteropKey = "surface_interop";
 AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 
 HWDecoder::HWDecoder(QObject * parent)

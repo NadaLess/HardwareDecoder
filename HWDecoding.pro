@@ -17,6 +17,7 @@ SOURCES += main.cpp \
     hwdecoderfactory.cpp
 
 win32: SOURCES += hwwindowsdecoder.cpp
+linux-g++ : SOURCES += vaapidecoder.cpp
 
 
 RESOURCES += qml.qrc
@@ -37,6 +38,12 @@ HEADERS += \
     hwdecoderfactory.h
 
 win32: HEADERS += hwwindowsdecoder.h
+linux-g++: HEADERS += vaapidecoder.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
+
+#Link with libva libs
+linux: {
+LIBS += -lva -lva-glx -lva-x11
+}

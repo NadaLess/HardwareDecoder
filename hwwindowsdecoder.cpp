@@ -27,7 +27,7 @@ QtAV::VideoFrame HWWindowsDecoder::createHWVideoFrame(const AVFrame *frame)
                                 frame->height,
                                 QtAV::VideoFormat::Format_RGBA32);
     videoFrame.setBytesPerLine(frame->linesize[0] * 4); //RGBA = 4 bits per pixel; NV12 = 2 bpp
-    videoFrame.setMetaData(QString::fromStdString("surface_interop"), QVariant::fromValue(m_surfaceInterop));
+    videoFrame.setMetaData(QString::fromStdString(kSurfaceInteropKey), QVariant::fromValue(m_surfaceInterop));
 
     if (m_zeroCopy)
         return videoFrame;

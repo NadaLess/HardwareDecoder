@@ -32,6 +32,8 @@ public:
 
     QObject* getPlayer() const;
 
+    static QString kSurfaceInteropKey;
+
 Q_SIGNALS:
     void playerChanged();
     void frameDecoded(const QtAV::VideoFrame & frame);
@@ -40,6 +42,7 @@ protected:
     QString m_deviceName;
     bool m_zeroCopy;
     QtAV::VideoSurfaceInteropPtr m_surfaceInterop;
+    AVCodecContext *m_decoderCtx;
 
 private:
     int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
@@ -56,12 +59,26 @@ private:
 
     AVCodec *m_decoder;
     AVFormatContext *m_inputCtx;
-    AVCodecContext *m_decoderCtx;
 
     QtAV::AVPlayer m_player;
     QFuture<void> m_processFuture;
 
 };
 
+struct ScopedAVFrameDeleter
+{
+    static inline void cleanup(void *pointer) {
+        if (pointer)
+            av_frame_free((AVFrame**)&pointer);
+    }
+};
+
+struct ScopedAVPacketDeleter
+{
+    static inline void cleanup(void *pointer) {
+        if (pointer)
+            av_packet_unref((AVPacket*)pointer);
+    }
+};
 
 #endif // HWDECODER_H
