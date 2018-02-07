@@ -37,13 +37,13 @@ void VideoFrame::unmap()
     m_surface->unmap();
 }
 
-UINT VideoFrame::width()
+int VideoFrame::width()
 {
     if (!m_surface) return 0;
     return m_surface->width();
 }
 
-UINT VideoFrame::height()
+int VideoFrame::height()
 {
     if (!m_surface) return 0;
     return m_surface->height();

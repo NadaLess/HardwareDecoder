@@ -16,8 +16,8 @@ public:
     bool map(GLuint name);
     void unmap();
 
-    UINT width();
-    UINT height();
+    int width();
+    int height();
 
 private:
     Surface * m_surface;

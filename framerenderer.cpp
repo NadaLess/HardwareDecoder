@@ -52,13 +52,11 @@ void FrameRenderer::render()
         glGenTextures(1, &name);
 
         if (m_frame->map(name)) {
-            glBindTexture(GL_TEXTURE_2D, name);
             m_program->bind();
 
             renderFrame();
 
             m_program->release();
-            glBindTexture(GL_TEXTURE_2D, 0);
             glFlush();
         }
         m_frame->unmap();

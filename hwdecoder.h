@@ -33,12 +33,15 @@ public:
     VideoSource *getSource() const;
     void setSource(VideoSource *source);
 
+    static QString kSurfaceInteropKey;
+
 Q_SIGNALS:
     void sourceChanged();
     void frameDecoded(VideoFramePtr frame);
 
 protected:
     QString m_deviceName;
+    AVCodecContext *m_decoderCtx;
 
 private:
     int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
@@ -55,11 +58,25 @@ private:
 
     AVCodec *m_decoder;
     AVFormatContext *m_inputCtx;
-    AVCodecContext *m_decoderCtx;
 
     VideoSource* m_source;
     QFuture<void> m_processFuture;
 };
 
+struct ScopedAVFrameDeleter
+{
+    static inline void cleanup(void *pointer) {
+        if (pointer)
+            av_frame_free((AVFrame**)&pointer);
+    }
+};
+
+struct ScopedAVPacketDeleter
+{
+    static inline void cleanup(void *pointer) {
+        if (pointer)
+            av_packet_unref((AVPacket*)pointer);
+    }
+};
 
 #endif // HWDECODER_H

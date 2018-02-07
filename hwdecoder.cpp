@@ -12,22 +12,7 @@ extern "C" {
 #include <QtConcurrent/QtConcurrent>
 #include <QDebug>
 
-struct ScopedAVFrameDeleter
-{
-    static inline void cleanup(void *pointer) {
-        if (pointer)
-            av_frame_free((AVFrame**)&pointer);
-    }
-};
-
-struct ScopedAVPacketDeleter
-{
-    static inline void cleanup(void *pointer) {
-        if (pointer)
-            av_packet_unref((AVPacket*)pointer);
-    }
-};
-
+QString HWDecoder::kSurfaceInteropKey = "surface_interop";
 AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 
 HWDecoder::HWDecoder(QObject * parent)
@@ -173,7 +158,15 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
         if (ret == AVERROR(EAGAIN)) {
             return 0;
         } else if (ret < 0) {
-            qWarning() << "Error while decoding";
+            switch(ret) {
+                case AVERROR_EOF:
+                    qWarning() << "File ended";
+                    sendFrame(new VideoFrame());
+                    break;
+                default:
+                    qWarning() << "Error while decoding, code:" << ret;
+                    break;
+            }
             return ret;
         }
 

@@ -12,22 +12,19 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-LIBS += -ldxgi
-LIBS += -ldxva2
-LIBS += -ld3d9
-LIBS += -ld3d11
-
 SOURCES += main.cpp \
     hwdecoder.cpp \
     hwdecoderfactory.cpp \
     videorenderer.cpp \
     framerenderer.cpp \
     videosource.cpp \
-    videoframe.cpp
+    videoframe.cpp \
+    surfacevaapi.cpp
 
 win32: SOURCES += hwwindowsdecoder.cpp \
-    surfaced3d9.cpp
+                  surfaced3d9.cpp
 
+linux-g++ : SOURCES += vaapidecoder.cpp
 
 
 RESOURCES += qml.qrc
@@ -50,10 +47,18 @@ HEADERS += \
     framerenderer.h \
     videosource.h \
     videoframe.h \
-    surface.h
+    surface.h \
+    surfacevaapi.h
 
-win32: HEADERS += hwwindowsdecoder.h \
+win: HEADERS += hwwindowsdecoder.h \
     surfaced3d9.h
+linux-g++: HEADERS += vaapidecoder.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
+
+#Link with DX libs (Windows)
+win: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
+
+#Link with libva libs (LINUX)
+linux: LIBS += -lX11 -lva -lva-glx -lva-x11
