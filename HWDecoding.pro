@@ -18,14 +18,15 @@ SOURCES += main.cpp \
     videorenderer.cpp \
     framerenderer.cpp \
     videosource.cpp \
-    videoframe.cpp \
-    surfacevaapi.cpp
+    videoframe.cpp
 
 win32: SOURCES += hwwindowsdecoder.cpp \
+                  d3d9renderer.cpp \
                   surfaced3d9.cpp
 
-linux-g++ : SOURCES += vaapidecoder.cpp
-
+linux-g++ : SOURCES += vaapidecoder.cpp \
+                       surfacevaapi.cpp \
+                       x11renderer.cpp
 
 RESOURCES += qml.qrc
 
@@ -47,12 +48,15 @@ HEADERS += \
     framerenderer.h \
     videosource.h \
     videoframe.h \
-    surface.h \
-    surfacevaapi.h
+    surface.h
 
 win: HEADERS += hwwindowsdecoder.h \
-    surfaced3d9.h
-linux-g++: HEADERS += vaapidecoder.h
+                d3d9renderer.h \
+                surfaced3d9.h
+
+linux-g++: HEADERS += vaapidecoder.h \
+                      surfacevaapi.h \
+                      x11renderer.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale

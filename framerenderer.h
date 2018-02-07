@@ -10,27 +10,14 @@
 class FrameRenderer: public QOpenGLFunctions
 {
 public:
-    FrameRenderer();
-    ~FrameRenderer();
+    static FrameRenderer* create();
 
-    void render();
-    void initialize();
-
+    virtual void render() = 0;
+    virtual void initialize() = 0;
     void setFrame(VideoFramePtr frame);
 
 private:
-    virtual void renderFrame();
-    void _allocProgram();
-    void _deallocProgram();
-    void _initGeometries();
-
-    QTransform m_transformation;
     VideoFramePtr m_frame;
-
-    QOpenGLShaderProgram * m_program;
-
-    QVector<QVector3D> in_pos;
-    QVector<QVector3D> in_tc;
 };
 
 #endif // FRAMERENDERER_H
