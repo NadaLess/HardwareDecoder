@@ -16,7 +16,7 @@ public:
     virtual void initialize() = 0;
     void setFrame(VideoFramePtr frame);
 
-private:
+protected:
     VideoFramePtr m_frame;
 };
 
