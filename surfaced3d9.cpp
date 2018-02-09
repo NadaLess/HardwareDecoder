@@ -1,4 +1,5 @@
 #include "surfaced3d9.h"
+#include <QOpenGLFunctions>
 #include <QDebug>
 
 SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface)
@@ -71,11 +72,19 @@ bool SurfaceD3D9::map(GLuint name)
     bool lock = wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle);
     bool objectAccess = wglDXObjectAccessNV(gl_handle, WGL_ACCESS_READ_ONLY_NV);
 
+    QOpenGLFunctions func;
+    func.initializeOpenGLFunctions();
+    func.glBindTexture(GL_TEXTURE_2D, name);
+
     return lock && objectAccess;
 }
 
 bool SurfaceD3D9::unmap()
 {
+    QOpenGLFunctions func;
+    func.initializeOpenGLFunctions();
+    func.glBindTexture(GL_TEXTURE_2D, 0);
+
     if (!_checkWGLFunctions()) return false;
 
     bool unlock = wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
