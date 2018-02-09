@@ -9,23 +9,17 @@ class VideoRenderer : public QQuickFramebufferObject::Renderer
 public:
     VideoRenderer()
     {
-        m_frameRenderer = FrameRenderer::create();
-        if (m_frameRenderer)
-            m_frameRenderer->initialize();
+        m_frameRenderer.initialize();
     }
 
     ~VideoRenderer() {
-        if (m_frameRenderer)
-            delete m_frameRenderer;
-        m_frameRenderer = nullptr;
     }
 
     void render() {
-        if (m_frameRenderer)
-            m_frameRenderer->render();
+        m_frameRenderer.render();
     }
 
-    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) {
+    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) {        
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         format.setSamples(4);
@@ -33,14 +27,14 @@ public:
     }
 
 private:
-    FrameRenderer* m_frameRenderer;
+    FrameRenderer m_frameRenderer;
 
     // Renderer interface
 protected:
     virtual void synchronize(QQuickFramebufferObject * renderer) override {
         VideoFBORenderer* fboRenderer = (VideoFBORenderer*)renderer;
-        if (fboRenderer && m_frameRenderer)
-            m_frameRenderer->setFrame(fboRenderer->frame());
+        if (fboRenderer)
+            m_frameRenderer.setFrame(fboRenderer->frame());
     }
 };
 

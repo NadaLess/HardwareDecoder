@@ -14,7 +14,6 @@ typedef void (*t_glx_release)(Display *, GLXDrawable, int);
 
 class SurfaceVAAPI: public Surface
 {
-    static int pixmap_config[];
 public:
     SurfaceVAAPI(VADisplay display, VASurfaceID surface, int width, int height, QObject * parent = nullptr);
     ~SurfaceVAAPI();

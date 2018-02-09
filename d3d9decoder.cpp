@@ -1,4 +1,4 @@
-#include "hwwindowsdecoder.h"
+#include "d3d9decoder.h"
 
 #include "surfaced3d9.h"
 

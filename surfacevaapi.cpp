@@ -1,17 +1,18 @@
 ﻿#include "surfacevaapi.h"
+#include <QtPlatformHeaders/QGLXNativeContext>
 
-int SurfaceVAAPI::pixmap_config[] = {
-    GLX_RENDER_TYPE, GLX_RGBA_BIT, //xbmc
-    GLX_X_RENDERABLE, True, //xbmc
+const int pixmap_config[] = {
     GLX_BIND_TO_TEXTURE_RGBA_EXT, True,
     GLX_DRAWABLE_TYPE, GLX_PIXMAP_BIT,
     GLX_BIND_TO_TEXTURE_TARGETS_EXT, GLX_TEXTURE_2D_BIT_EXT,
-    GLX_Y_INVERTED_EXT, True,
     GLX_DOUBLEBUFFER, False,
-    GLX_RED_SIZE, 8,
-    GLX_GREEN_SIZE, 8,
-    GLX_BLUE_SIZE, 8,
-    GLX_ALPHA_SIZE, 8, //0 for 24 bpp(vdpau)? mpv is 0
+    GLX_Y_INVERTED_EXT, GLX_DONT_CARE,
+    None
+};
+
+const int pixmap_attribs[] = {
+    GLX_TEXTURE_TARGET_EXT, GLX_TEXTURE_2D_EXT,
+    GLX_TEXTURE_FORMAT_EXT, GLX_TEXTURE_FORMAT_RGB_EXT,
     None
 };
 
@@ -53,13 +54,28 @@ bool SurfaceVAAPI::map(GLuint name)
 
     if (!ensurePixmap()) return false;
 
-    glBindTexture(GL_TEXTURE_2D, name);
+    VAStatus syncResult = vaSyncSurface(m_vaDisplay, m_surface);
+    if (syncResult != VA_STATUS_SUCCESS) return false;
+
+    VAStatus putResult = vaPutSurface(m_vaDisplay, m_surface, m_pixmap
+                 , 0, 0, m_width, m_height
+                 , 0, 0, m_width, m_height
+                 , NULL, 0, VA_FRAME_PICTURE | VA_SRC_BT709);
+    if (putResult != VA_STATUS_SUCCESS) {
+        qWarning() << Q_FUNC_INFO << "Error vaPutSurface" << putResult;
+        return false;
+    }
+
+    XSync(m_x11Display, False);
+
     glXBindTexImageEXT(m_x11Display, m_glxPixmap, GLX_FRONT_EXT, NULL);
+
     return true;
 }
 
 bool SurfaceVAAPI::unmap()
 {
+    glXReleaseTexImageEXT(m_x11Display, m_glxPixmap, GLX_FRONT_EXT);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     //FNadales: Unmap is not needed
@@ -98,6 +114,8 @@ bool SurfaceVAAPI::ensureDisplay()
 
 bool SurfaceVAAPI::ensurePixmap()
 {
+    if (m_glxPixmap) return true;
+
     if (m_pixmap) {
         XFreePixmap(m_x11Display, m_pixmap);
         m_pixmap = 0;
@@ -109,25 +127,9 @@ bool SurfaceVAAPI::ensurePixmap()
 
     if (!m_pixmap) return false;
 
-    const int attribs[] = {
-        GLX_TEXTURE_TARGET_EXT, GLX_TEXTURE_2D_EXT,
-        GLX_TEXTURE_FORMAT_EXT, xwa.depth == 32 ? GLX_TEXTURE_FORMAT_RGBA_EXT : GLX_TEXTURE_FORMAT_RGB_EXT,
-        GLX_MIPMAP_TEXTURE_EXT, False,
-        None,
-    };
-    m_glxPixmap = glXCreatePixmap(m_x11Display, m_config, m_pixmap, attribs);
-
-    if (!m_glxPixmap) return false;
-
-    vaSyncSurface(m_vaDisplay, m_surface);
-    VAStatus sta = vaPutSurface(m_vaDisplay, m_surface, m_pixmap
-                 , 0, 0, m_width, m_height
-                 , 0, 0, m_width, m_height
-                 , NULL, 0, VA_FRAME_PICTURE | VA_SRC_BT709);
-    if (sta != VA_STATUS_SUCCESS) {
-        qWarning() << Q_FUNC_INFO << "Error vaPutSurfacve" << sta;
+    m_glxPixmap = glXCreatePixmap(m_x11Display, m_config, m_pixmap, pixmap_attribs);
+    if (!m_glxPixmap)
         return false;
-    }
 
     return true;
 }
