@@ -3,11 +3,10 @@
 
 #include "hwdecoder.h"
 
-class HWWindowsDecoder: public HWDecoder
+class D3D9Decoder: public HWDecoder
 {
-    Q_OBJECT
 public:
-    HWWindowsDecoder(QObject * parent = nullptr);
+    D3D9Decoder(QObject * parent = nullptr);
 
     // HWDecoder interface
 private:
