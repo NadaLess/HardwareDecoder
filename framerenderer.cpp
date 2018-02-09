@@ -64,6 +64,8 @@ void FrameRenderer::render() {
     if (!m_frame.isNull())
         m_frame->map(m_texture);
 
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+
     m_shaderProgram.setUniformValue("frameTexture", m_texture);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -84,6 +86,9 @@ void FrameRenderer::render() {
     m_shaderProgram.disableAttributeArray(m_in_pos);
 
     m_shaderProgram.release();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glFlush();
 
     if (!m_frame.isNull())
         m_frame->unmap();

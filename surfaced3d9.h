@@ -31,8 +31,8 @@ public:
     // Surface interface
     virtual bool map(GLuint name) override;
     virtual bool unmap() override;
-    virtual UINT width() override;
-    virtual UINT height() override;
+    virtual int width() override;
+    virtual int height() override;
 
 private:
     bool _initWGLFunctions();

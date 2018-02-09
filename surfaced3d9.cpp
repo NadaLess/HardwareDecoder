@@ -88,12 +88,12 @@ bool SurfaceD3D9::unmap()
     return unlock && unregister && closeDevice;
 }
 
-UINT SurfaceD3D9::width()
+int SurfaceD3D9::width()
 {
     return surfaceDescriptor.Width;
 }
 
-UINT SurfaceD3D9::height()
+int SurfaceD3D9::height()
 {
     return surfaceDescriptor.Height;
 }
