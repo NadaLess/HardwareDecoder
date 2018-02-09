@@ -16,6 +16,8 @@ void FrameRenderer::initialize()
 
     glClearColor(0.f, 0.f, 0.f, 1.0f);
 
+    glGenTextures(1,&m_texture);
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
@@ -54,14 +56,15 @@ void FrameRenderer::render() {
     glClearColor(0.f, 0.f, 0.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLuint texture;
-    glGenTextures(1,&texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glFrontFace(GL_CW);
+    glCullFace(GL_FRONT);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 
     if (!m_frame.isNull())
-        m_frame->map(texture);
+        m_frame->map(m_texture);
 
-    m_shaderProgram.setUniformValue("frameTexture", texture);
+    m_shaderProgram.setUniformValue("frameTexture", m_texture);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -85,7 +88,8 @@ void FrameRenderer::render() {
     if (!m_frame.isNull())
         m_frame->unmap();
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 }
 
 void FrameRenderer::initShaderProgram()

@@ -227,6 +227,10 @@ void HWDecoder::processFile(const QString & input)
         av_packet_unref(&packet);
     }
 
+    sendFrame(new VideoFrame());
+
+    QThread::msleep(50);
+
     flush();
     close();
 }

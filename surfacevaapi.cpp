@@ -50,9 +50,13 @@ SurfaceVAAPI::~SurfaceVAAPI()
 
 bool SurfaceVAAPI::map(GLuint name)
 {
+    glBindTexture(GL_TEXTURE_2D, name);
+
     if (!ensureDisplay()) return false;
 
     if (!ensurePixmap()) return false;
+
+    if (!vaDisplayIsValid(m_vaDisplay)) return false;
 
     VAStatus syncResult = vaSyncSurface(m_vaDisplay, m_surface);
     if (syncResult != VA_STATUS_SUCCESS) return false;
@@ -78,7 +82,6 @@ bool SurfaceVAAPI::unmap()
     glXReleaseTexImageEXT(m_x11Display, m_glxPixmap, GLX_FRONT_EXT);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    //FNadales: Unmap is not needed
     return true;
 }
 

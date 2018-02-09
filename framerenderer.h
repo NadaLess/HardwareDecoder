@@ -28,6 +28,7 @@ private:
     int m_in_tc;
 
     VideoFramePtr m_frame;
+    GLuint m_texture;
 };
 
 #endif // FRAMERENDERER_H
