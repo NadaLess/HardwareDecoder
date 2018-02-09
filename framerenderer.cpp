@@ -8,6 +8,7 @@ FrameRenderer::FrameRenderer()
 
 FrameRenderer::~FrameRenderer()
 {
+    glDeleteTextures(1, &m_texture);
 }
 
 void FrameRenderer::initialize()
