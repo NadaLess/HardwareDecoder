@@ -10,9 +10,6 @@ extern "C" {
 
 #include <QByteArray>
 #include <QtConcurrent/QtConcurrent>
-#include <QtAV/VideoFrame.h>
-#include <QtAV/VideoRenderer.h>
-#include <QtAV/ZeroCopyChecker.h>
 #include <QDebug>
 
 QString HWDecoder::kSurfaceInteropKey = "surface_interop";
@@ -21,14 +18,16 @@ AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 HWDecoder::HWDecoder(QObject * parent)
     : QObject(parent), m_type(AV_HWDEVICE_TYPE_NONE),
       m_hwDeviceCtx(nullptr), m_decoder(nullptr),
-      m_inputCtx(nullptr), m_decoderCtx(nullptr), m_zeroCopy(false)
+      m_inputCtx(nullptr), m_decoderCtx(nullptr)
 {
-    m_zeroCopy = QtAV::ZeroCopyChecker::instance()->enabled();
     av_register_all();
+    m_source = new VideoSource(this);
+    connect(this, &HWDecoder::frameDecoded, m_source, &VideoSource::setFrame);
 }
 
 HWDecoder::~HWDecoder()
 {
+    disconnect(m_source);
     m_processFuture.waitForFinished();
     flush();
     close();
@@ -104,7 +103,7 @@ bool HWDecoder::open()
 
 void HWDecoder::close()
 {
-    sendFrame(QtAV::VideoFrame());
+    //TODO: Clear frames
     avcodec_free_context(&m_decoderCtx);
     avformat_close_input(&m_inputCtx);
     av_buffer_unref(&m_hwDeviceCtx);
@@ -159,11 +158,19 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
         if (ret == AVERROR(EAGAIN)) {
             return 0;
         } else if (ret < 0) {
-            qWarning() << "Error while decoding";
+            switch(ret) {
+                case AVERROR_EOF:
+                    qWarning() << "File ended";
+                    sendFrame(new VideoFrame());
+                    break;
+                default:
+                    qWarning() << "Error while decoding, code:" << ret;
+                    break;
+            }
             return ret;
         }
 
-        QtAV::VideoFrame videoFrame;
+        VideoFrame* videoFrame;
         if (frame->format == m_hwPixFmt) {
             videoFrame = createHWVideoFrame(frame.data());
         } else {
@@ -220,6 +227,10 @@ void HWDecoder::processFile(const QString & input)
         av_packet_unref(&packet);
     }
 
+    sendFrame(new VideoFrame());
+
+    QThread::msleep(50);
+
     flush();
     close();
 }
@@ -232,18 +243,21 @@ void HWDecoder::decodeVideo(const QUrl &input)
     }
 }
 
-QObject* HWDecoder::getPlayer() const
+void HWDecoder::sendFrame(VideoFrame *frame)
 {
-    return (QObject*)&m_player;
+    VideoFramePtr sharedFrame(frame);
+    Q_EMIT frameDecoded(sharedFrame);
 }
 
-void HWDecoder::sendFrame(const QtAV::VideoFrame &frame)
+VideoSource *HWDecoder::getSource() const
 {
-    Q_EMIT frameDecoded(frame);
+    return m_source;
+}
 
-    //Send to local render
-    for(QtAV::VideoRenderer* output : m_player.videoOutputs()) {
-        if (!output || !output->isAvailable()) continue;
-        output->receive(frame);
+void HWDecoder::setSource(VideoSource *source)
+{
+    if (m_source != source) {
+        m_source = source;
+        Q_EMIT sourceChanged();
     }
 }

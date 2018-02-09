@@ -5,8 +5,8 @@
 #include <QFile>
 #include <QFuture>
 
-#include <QtAV/AVPlayer.h>
-#include <QtAV/SurfaceInterop.h>
+#include "videosource.h"
+#include "videoframe.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -16,7 +16,7 @@ extern "C" {
 class HWDecoder: public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QObject* source READ getPlayer NOTIFY playerChanged)
+    Q_PROPERTY(VideoSource* source READ getSource WRITE setSource NOTIFY sourceChanged)
 public:
     static enum AVPixelFormat getFormat(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 
@@ -30,18 +30,17 @@ public:
 
     Q_INVOKABLE void decodeVideo(const QUrl & input);
 
-    QObject* getPlayer() const;
+    VideoSource *getSource() const;
+    void setSource(VideoSource *source);
 
     static QString kSurfaceInteropKey;
 
 Q_SIGNALS:
-    void playerChanged();
-    void frameDecoded(const QtAV::VideoFrame & frame);
+    void sourceChanged();
+    void frameDecoded(VideoFramePtr frame);
 
 protected:
     QString m_deviceName;
-    bool m_zeroCopy;
-    QtAV::VideoSurfaceInteropPtr m_surfaceInterop;
     AVCodecContext *m_decoderCtx;
 
 private:
@@ -49,9 +48,9 @@ private:
     int decode(AVCodecContext *avctx, AVPacket *packet);
     void processStream(const QIODevice * buffer);
     void processFile(const QString & input);
-    void sendFrame(const QtAV::VideoFrame & frame);
+    void sendFrame(VideoFrame * frame);
 
-    virtual QtAV::VideoFrame createHWVideoFrame(const AVFrame * frame) = 0;
+    virtual VideoFrame* createHWVideoFrame(const AVFrame * frame) = 0;
 
     AVHWDeviceType m_type;
     AVBufferRef *m_hwDeviceCtx;
@@ -60,9 +59,8 @@ private:
     AVCodec *m_decoder;
     AVFormatContext *m_inputCtx;
 
-    QtAV::AVPlayer m_player;
+    VideoSource* m_source;
     QFuture<void> m_processFuture;
-
 };
 
 struct ScopedAVFrameDeleter

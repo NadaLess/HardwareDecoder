@@ -1,4 +1,4 @@
-QT += quick concurrent av
+QT += quick concurrent gui opengl
 CONFIG += c++11
 
 # The following define makes your compiler emit warnings if you use
@@ -14,11 +14,18 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp \
     hwdecoder.cpp \
-    hwdecoderfactory.cpp
+    hwdecoderfactory.cpp \
+    videorenderer.cpp \
+    framerenderer.cpp \
+    videosource.cpp \
+    videoframe.cpp
 
-win32: SOURCES += hwwindowsdecoder.cpp
-linux-g++ : SOURCES += vaapidecoder.cpp
 
+win32: SOURCES += d3d9decoder.cpp \
+                  surfaced3d9.cpp
+
+linux-g++ : SOURCES += vaapidecoder.cpp \
+                       surfacevaapi.cpp
 
 RESOURCES += qml.qrc
 
@@ -35,15 +42,24 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     hwdecoder.h \
-    hwdecoderfactory.h
+    hwdecoderfactory.h \
+    videorenderer.h \
+    framerenderer.h \
+    videosource.h \
+    videoframe.h \
+    surface.h
 
-win32: HEADERS += hwwindowsdecoder.h
-linux-g++: HEADERS += vaapidecoder.h
+win: HEADERS += d3d9decoder.h \
+                surfaced3d9.h
+
+linux-g++: HEADERS += vaapidecoder.h \
+                      surfacevaapi.h
 
 #Link with FFmpeg installed in Qt
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
 
-#Link with libva libs
-linux: {
-LIBS += -lva -lva-glx -lva-x11
-}
+#Link with DX libs (Windows)
+win: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
+
+#Link with libva libs (LINUX)
+linux: LIBS += -lX11 -lva -lva-glx -lva-x11 -lGLU
