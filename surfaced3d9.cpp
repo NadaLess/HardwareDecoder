@@ -1,95 +1,115 @@
 #include "surfaced3d9.h"
-#include <QOpenGLFunctions>
+#include "d3d9interop.h"
 #include <QDebug>
 
-SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface)
-    : Surface()
-    , dx_surface(nullptr)
-    , dx_texture(nullptr)
-    , sharedHandle(nullptr)
+extern "C" {
+#include "libavutil/imgutils.h"
+}
+
+#include "yuv2rgb.h"
+
+#define NV12_FORMAT 0x3231564e  // 2 1 V N
+
+SurfaceD3D9::SurfaceD3D9(IDirect3DSurface9 * surface, int width, int height)
+    : Surface(width, height)
+    , m_device(nullptr)
+    , m_texture(nullptr)
+    , m_surface(nullptr)
+    , m_origSurface(nullptr)
+    , m_shareHandle(nullptr)
     , gl_handleD3D(nullptr)
     , gl_handle(nullptr)
 {
-    if (surface == nullptr) return;
+    if (surface == nullptr) {
+        qWarning() << Q_FUNC_INFO << "Null Surface!!!";
+        return;
+    }
 
-    if (FAILED(surface->GetDevice(&dx_device))) {
+    m_origSurface = surface;
+    if (FAILED(m_origSurface->GetDevice(&m_device))) {
         qWarning() << Q_FUNC_INFO << "Error getting the Device from the Surface";
         return;
     }
 
-    surface->GetDesc(&surfaceDescriptor);
+    m_origSurface->GetDesc(&m_surfaceDesc);
 
-    dx_device->CreateTexture(surfaceDescriptor.Width, surfaceDescriptor.Height, 1,
-                             D3DUSAGE_RENDERTARGET,
-                             D3DFMT_X8R8G8B8,
-                             D3DPOOL_DEFAULT,
-                             &dx_texture,
-                             &sharedHandle);
+    if (D3D9Interop::instance()->enabled()) {
+        //Copy Original Surface for Zero-Copy Rendering
+        m_device->CreateTexture(m_surfaceDesc.Width, m_surfaceDesc.Height, 1,
+                                D3DUSAGE_RENDERTARGET,
+                                D3DFMT_X8R8G8B8,
+                                m_surfaceDesc.Pool,
+                                &m_texture,
+                                &m_shareHandle);
 
-    dx_texture->GetSurfaceLevel(0, &dx_surface);
-    dx_device->StretchRect(surface, NULL, dx_surface, NULL, D3DTEXF_NONE);
-
-    _resetWGLFunctions();
+        m_texture->GetSurfaceLevel(0, &m_surface);
+        m_device->StretchRect(surface, NULL, m_surface, NULL, D3DTEXF_NONE);
+    } else {
+        extractSurfaceData();
+    }
 }
 
 SurfaceD3D9::~SurfaceD3D9() {
-    _resetWGLFunctions();
 
-    if (dx_surface)
-        dx_surface->Release();
-    dx_surface = nullptr;
+    if (m_surface)
+        m_surface->Release();
+    m_surface = nullptr;
 
-    if (dx_texture)
-        dx_texture->Release();
-    dx_texture = nullptr;
+    if (m_texture)
+        m_texture->Release();
+    m_texture = nullptr;
 
+    m_device = nullptr;
     gl_handleD3D = nullptr;
     gl_handle = nullptr;
 }
 
 bool SurfaceD3D9::map(GLuint name)
 {
-    if (!_initWGLFunctions()) return false;
+    if (!D3D9Interop::instance()->enabled())
+        return Surface::map(name);
 
-    if (dx_surface == nullptr) return false;
+    initGLFunctions();
+
+    if (m_surface == nullptr) return false;
 
     // required by d3d9 not d3d10&11: https://www.opengl.org/registry/specs/NV/DX_interop2.txt
-    wglDXSetResourceShareHandleNV(dx_surface, sharedHandle);
+    D3D9Interop::instance()->wglDXSetResourceShareHandleNV(m_surface, m_shareHandle);
 
     // register the Direct3D device with GL
-    gl_handleD3D = wglDXOpenDeviceNV(dx_device);
-    if (gl_handleD3D == NULL)
+    gl_handleD3D = D3D9Interop::instance()->wglDXOpenDeviceNV(m_device);
+    if (gl_handleD3D == NULL) {
+        qWarning() << Q_FUNC_INFO << "wglDXOpenDeviceNV" << GetLastError();
         return false;
+    }
 
-    gl_handle = wglDXRegisterObjectNV(gl_handleD3D,
-                                      dx_surface,
+    gl_handle = D3D9Interop::instance()->wglDXRegisterObjectNV(gl_handleD3D,
+                                      m_surface,
                                       name,
                                       GL_TEXTURE_2D,
                                       WGL_ACCESS_READ_ONLY_NV);
-    if (gl_handle == NULL)
+    if (gl_handle == NULL) {
+        qWarning() << Q_FUNC_INFO << "wglDXRegisterObjectNV" << GetLastError();
         return false;
+    }
 
-    bool lock = wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle);
-    bool objectAccess = wglDXObjectAccessNV(gl_handle, WGL_ACCESS_READ_ONLY_NV);
+    bool lock = D3D9Interop::instance()->wglDXLockObjectsNV(gl_handleD3D, 1, &gl_handle);
+    bool objectAccess = D3D9Interop::instance()->wglDXObjectAccessNV(gl_handle, WGL_ACCESS_READ_ONLY_NV);
 
-    QOpenGLFunctions func;
-    func.initializeOpenGLFunctions();
-    func.glBindTexture(GL_TEXTURE_2D, name);
+    m_glFunctions.glBindTexture(GL_TEXTURE_2D, name);
 
     return lock && objectAccess;
 }
 
 bool SurfaceD3D9::unmap()
 {
-    QOpenGLFunctions func;
-    func.initializeOpenGLFunctions();
-    func.glBindTexture(GL_TEXTURE_2D, 0);
+    m_glFunctions.glBindTexture(GL_TEXTURE_2D, 0);
 
-    if (!_checkWGLFunctions()) return false;
+    if (!D3D9Interop::instance()->enabled()) return false;
 
-    bool unlock = wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
-    bool unregister = wglDXUnregisterObjectNV(gl_handleD3D, gl_handle);
-    bool closeDevice = wglDXCloseDeviceNV(gl_handleD3D);
+    bool unlock = D3D9Interop::instance()->wglDXUnlockObjectsNV(gl_handleD3D, 1, &gl_handle);
+    bool unregister = D3D9Interop::instance()->wglDXUnregisterObjectNV(gl_handleD3D, gl_handle);
+    bool closeDevice = D3D9Interop::instance()->wglDXCloseDeviceNV(gl_handleD3D);
 
     gl_handleD3D = NULL;
     gl_handle = NULL;
@@ -97,68 +117,59 @@ bool SurfaceD3D9::unmap()
     return unlock && unregister && closeDevice;
 }
 
-int SurfaceD3D9::width()
+void SurfaceD3D9::extractSurfaceData()
 {
-    return surfaceDescriptor.Width;
-}
+    if (!m_rgbData.isEmpty()) return;
 
-int SurfaceD3D9::height()
-{
-    return surfaceDescriptor.Height;
-}
-
-bool SurfaceD3D9::_initWGLFunctions()
-{
-    if (_checkWGLFunctions()) return true;
-
-    QOpenGLContext * context = QOpenGLContext::currentContext();
-    if (context == nullptr) return false;
-
-    QByteArray interopExtension("WGL_NV_DX_interop");
-
-    if (!context->hasExtension(interopExtension)) {
-        return false;
+    if (m_surfaceDesc.Format != NV12_FORMAT)
+    {
+        qWarning() << Q_FUNC_INFO << "Wrong format, expected NV12";
+        return;
     }
 
-    wglDXOpenDeviceNV = (PFNWGLDXOPENDEVICENVPROC)context->getProcAddress("wglDXOpenDeviceNV");
-    wglDXCloseDeviceNV = (PFNWGLDXCLOSEDEVICENVPROC)context->getProcAddress("wglDXCloseDeviceNV");
+    if (m_origSurface)
+    {
+        D3DLOCKED_RECT lockedRect;
+        ZeroMemory(&lockedRect, sizeof(D3DLOCKED_RECT));
+        HRESULT hr = m_origSurface->LockRect(&lockedRect, NULL, D3DLOCK_READONLY);
+        if (SUCCEEDED(hr))
+        {
+            //Resize RGB Data Buffer
+            size_t size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, m_width, m_height, 1);
+            m_rgbData.resize(size);
 
-    wglDXRegisterObjectNV = (PFNWGLDXREGISTEROBJECTNVPROC)context->getProcAddress("wglDXRegisterObjectNV");
-    wglDXUnregisterObjectNV = (PFNWGLDXUNREGISTEROBJECTNVPROC)context->getProcAddress("wglDXUnregisterObjectNV");
+            //Convert NV12 Buffer to RGB stored Buffer
+            nv21_to_bgr((unsigned char*)m_rgbData.data(),
+                        (unsigned char*)cropImage(lockedRect).data(),
+                        m_width, m_height);
 
-    wglDXLockObjectsNV = (PFNWGLDXLOCKOBJECTSNVPROC)context->getProcAddress("wglDXLockObjectsNV");
-    wglDXUnlockObjectsNV = (PFNWGLDXUNLOCKOBJECTSNVPROC)context->getProcAddress("wglDXUnlockObjectsNV");
-
-    wglDXSetResourceShareHandleNV = (PFNWGLDXSETRESOURCESHAREHANDLENVPROC)context->getProcAddress("wglDXSetResourceShareHandleNV");
-
-    wglDXObjectAccessNV = (PFNWGLDXOBJECTACCESSNVPROC)context->getProcAddress("wglDXObjectAccessNV");
-    return true;
+            m_origSurface->UnlockRect();
+        }
+    }
 }
 
-void SurfaceD3D9::_resetWGLFunctions()
+QByteArray SurfaceD3D9::cropImage(D3DLOCKED_RECT & lockedRect)
 {
-    wglDXOpenDeviceNV = nullptr;
-    wglDXCloseDeviceNV = nullptr;
+    size_t dstSize = av_image_get_buffer_size(AV_PIX_FMT_NV12, m_width, m_height, 1);
+    QByteArray dstData(dstSize, 0x00);
+    char * dstYData = dstData.data();
+    char * dstUVData = dstYData + (m_width * m_height);
 
-    wglDXRegisterObjectNV = nullptr;
-    wglDXUnregisterObjectNV = nullptr;
+    char * srcYData = (char*)lockedRect.pBits;
+    char * srcUVData = srcYData + (lockedRect.Pitch * m_surfaceDesc.Height);
 
-    wglDXLockObjectsNV = nullptr;
-    wglDXUnlockObjectsNV = nullptr;
+    int chromaHeight = m_height >> 1;
+    for (int i = 0; i < m_height; i++) {
+        memcpy(dstYData, srcYData, m_width);
+        srcYData += lockedRect.Pitch;
+        dstYData += m_width;
 
-    wglDXSetResourceShareHandleNV = nullptr;
+        if (i < chromaHeight) {
+            memcpy(dstUVData, srcUVData, m_width);
+            srcUVData += lockedRect.Pitch;
+            dstUVData += m_width;
+        }
+    }
 
-    wglDXObjectAccessNV = nullptr;
-}
-
-bool SurfaceD3D9::_checkWGLFunctions()
-{
-    return (wglDXOpenDeviceNV != nullptr &&
-            wglDXCloseDeviceNV != nullptr &&
-            wglDXRegisterObjectNV != nullptr &&
-            wglDXUnregisterObjectNV != nullptr &&
-            wglDXLockObjectsNV != nullptr &&
-            wglDXUnlockObjectsNV != nullptr &&
-            wglDXSetResourceShareHandleNV != nullptr &&
-            wglDXObjectAccessNV != nullptr);
+    return dstData;
 }

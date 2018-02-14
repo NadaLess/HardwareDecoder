@@ -1,4 +1,4 @@
-QT += quick concurrent gui opengl
+QT += quick concurrent gui
 CONFIG += c++11
 
 # The following define makes your compiler emit warnings if you use
@@ -18,10 +18,12 @@ SOURCES += main.cpp \
     videorenderer.cpp \
     framerenderer.cpp \
     videosource.cpp \
-    videoframe.cpp
-
+    videoframe.cpp \
+    surface.cpp \
+    yuv2rgb.cpp
 
 win32: SOURCES += d3d9decoder.cpp \
+                  d3d9interop.cpp \
                   surfaced3d9.cpp
 
 linux-g++ : SOURCES += vaapidecoder.cpp \
@@ -47,10 +49,12 @@ HEADERS += \
     framerenderer.h \
     videosource.h \
     videoframe.h \
-    surface.h
+    surface.h \
+    yuv2rgb.h
 
-win: HEADERS += d3d9decoder.h \
-                surfaced3d9.h
+win32: HEADERS += d3d9decoder.h \
+                  d3d9interop.h \
+                  surfaced3d9.h
 
 linux-g++: HEADERS += vaapidecoder.h \
                       surfacevaapi.h
@@ -59,7 +63,7 @@ linux-g++: HEADERS += vaapidecoder.h \
 LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
 
 #Link with DX libs (Windows)
-win: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
+win32: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
 
 #Link with libva libs (LINUX)
-linux: LIBS += -lX11 -lva -lva-glx -lva-x11 -lGLU
+linux-g++: LIBS += -lX11 -lva -lva-glx -lva-x11 -lGLU

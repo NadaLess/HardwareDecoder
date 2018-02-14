@@ -11,6 +11,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
 }
 
 class HWDecoder: public QObject
@@ -51,6 +52,7 @@ private:
     void sendFrame(VideoFrame * frame);
 
     virtual VideoFrame* createHWVideoFrame(const AVFrame * frame) = 0;
+    VideoFrame* createSWVideoFrame(const AVFrame *frame);
 
     AVHWDeviceType m_type;
     AVBufferRef *m_hwDeviceCtx;
@@ -61,6 +63,8 @@ private:
 
     VideoSource* m_source;
     QFuture<void> m_processFuture;
+
+    SwsContext * m_swsCtx;
 };
 
 struct ScopedAVFrameDeleter

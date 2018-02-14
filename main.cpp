@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include "hwdecoderfactory.h"
 #include "videorenderer.h"
+#include "d3d9interop.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +12,9 @@ int main(int argc, char *argv[])
 #endif
 
     QGuiApplication app(argc, argv);
+
+    //Fnadales: Needed to check OpenGLExtensions for D3D9
+    D3D9Interop::instance();
 
     QQmlApplicationEngine engine;
     qmlRegisterUncreatableType<VideoSource>("VideoHW", 0, 1, "VideoSource", "C++ Created");

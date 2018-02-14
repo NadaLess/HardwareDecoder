@@ -65,7 +65,11 @@ void FrameRenderer::render() {
     if (!m_frame.isNull())
         m_frame->map(m_texture);
 
-    m_shaderProgram.setUniformValue("frameTexture", m_texture);
+    GLuint texture = m_texture;
+#if defined(Q_OS_WIN)
+    texture = 0;
+#endif
+    m_shaderProgram.setUniformValue("frameTexture", texture);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

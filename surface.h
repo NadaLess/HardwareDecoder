@@ -2,22 +2,28 @@
 #define SURFACE_H
 
 #include <QObject>
-#include <QtGlobal>
-#include <QtOpenGL>
-#include <QtOpenGL/QGL>
+#include <QOpenGLFunctions>
 
 class Surface: public QObject
 {
     Q_OBJECT
 public:
-    Surface(QObject * parent = nullptr) : QObject(parent) {}
-    virtual ~Surface() {}
+    Surface(int width, int height, QObject * parent = nullptr);
+    virtual ~Surface();
 
-    virtual bool map(GLuint name) = 0;
-    virtual bool unmap() = 0;
+    virtual bool map(GLuint name);
+    virtual bool unmap();
 
-    virtual int width() = 0;
-    virtual int height() = 0;
+    virtual int width();
+    virtual int height();
+
+protected:
+    void initGLFunctions();
+
+    int m_width;
+    int m_height;
+    QOpenGLFunctions m_glFunctions;
+    QByteArray m_rgbData;
 };
 
 #endif // SURFACE_H
