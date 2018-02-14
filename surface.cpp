@@ -1,5 +1,4 @@
 #include "surface.h"
-#include <QImage>
 
 Surface::Surface(int width, int height, QObject * parent)
     : QObject(parent),

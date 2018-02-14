@@ -22,8 +22,6 @@ public:
 public:
     bool map(GLuint name);
     bool unmap();
-    int width();
-    int height();
 
 private:
     bool ensureDisplay();
@@ -47,9 +45,6 @@ private:
     //X11 instances
     Display *m_x11Display;
     Pixmap m_pixmap;
-
-    int m_width;
-    int m_height;
 };
 
 #endif // SURFACEVAAPI_H

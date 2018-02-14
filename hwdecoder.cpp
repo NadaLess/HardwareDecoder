@@ -18,8 +18,7 @@ AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 HWDecoder::HWDecoder(QObject * parent)
     : QObject(parent), m_type(AV_HWDEVICE_TYPE_NONE),
       m_hwDeviceCtx(nullptr), m_decoder(nullptr),
-      m_inputCtx(nullptr), m_decoderCtx(nullptr),
-      m_swsCtx(nullptr)
+      m_inputCtx(nullptr), m_decoderCtx(nullptr)
 {
     av_register_all();
     m_source = new VideoSource(this);

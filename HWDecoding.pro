@@ -20,13 +20,14 @@ SOURCES += main.cpp \
     videosource.cpp \
     videoframe.cpp \
     surface.cpp \
-    yuv2rgb.cpp
+    yuv2rgb.cpp \
+    openglinterop.cpp
 
 win32: SOURCES += d3d9decoder.cpp \
                   d3d9interop.cpp \
                   surfaced3d9.cpp
 
-linux-g++ : SOURCES += vaapidecoder.cpp \
+linux-g++: SOURCES += vaapidecoder.cpp \
                        surfacevaapi.cpp
 
 RESOURCES += qml.qrc
@@ -50,7 +51,8 @@ HEADERS += \
     videosource.h \
     videoframe.h \
     surface.h \
-    yuv2rgb.h
+    yuv2rgb.h \
+    openglinterop.h
 
 win32: HEADERS += d3d9decoder.h \
                   d3d9interop.h \
@@ -60,10 +62,10 @@ linux-g++: HEADERS += vaapidecoder.h \
                       surfacevaapi.h
 
 #Link with FFmpeg installed in Qt
-LIBS += -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale
+LIBS += -lavcodec -lavdevice -lavformat -lavutil -lswscale
 
 #Link with DX libs (Windows)
 win32: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
 
 #Link with libva libs (LINUX)
-linux-g++: LIBS += -lX11 -lva -lva-glx -lva-x11 -lGLU
+linux-g++: LIBS += -lX11 -lva -lva-glx -lva-x11

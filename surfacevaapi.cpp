@@ -2,7 +2,7 @@
 #include <QtPlatformHeaders/QGLXNativeContext>
 
 const int pixmap_config[] = {
-    GLX_BIND_TO_TEXTURE_RGBA_EXT, True,
+    GLX_BIND_TO_TEXTURE_RGB_EXT, True,
     GLX_DRAWABLE_TYPE, GLX_PIXMAP_BIT,
     GLX_BIND_TO_TEXTURE_TARGETS_EXT, GLX_TEXTURE_2D_BIT_EXT,
     GLX_DOUBLEBUFFER, False,
@@ -18,15 +18,13 @@ const int pixmap_attribs[] = {
 
 SurfaceVAAPI::SurfaceVAAPI(VADisplay display, VASurfaceID surface,
                            int width, int height, QObject * parent)
-    : Surface(parent),
+    : Surface(width, height, parent),
       m_glxPixmap(0),
       m_config(0),
       m_vaDisplay(display),
       m_surface(surface),
       m_x11Display(nullptr),
-      m_pixmap(0),
-      m_width(width),
-      m_height(height)
+      m_pixmap(0)
 {
     resetGLXFunctions();
 }
@@ -66,7 +64,6 @@ bool SurfaceVAAPI::map(GLuint name)
                  , 0, 0, m_width, m_height
                  , NULL, 0, VA_FRAME_PICTURE | VA_SRC_BT709);
     if (putResult != VA_STATUS_SUCCESS) {
-        qWarning() << Q_FUNC_INFO << "Error vaPutSurface" << putResult;
         return false;
     }
 
@@ -83,16 +80,6 @@ bool SurfaceVAAPI::unmap()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     return true;
-}
-
-int SurfaceVAAPI::width()
-{
-    return m_width;
-}
-
-int SurfaceVAAPI::height()
-{
-    return m_height;
 }
 
 bool SurfaceVAAPI::ensureDisplay()
