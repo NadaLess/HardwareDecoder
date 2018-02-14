@@ -62,10 +62,10 @@ linux-g++: HEADERS += vaapidecoder.h \
                       surfacevaapi.h
 
 #Link with FFmpeg installed in Qt
-LIBS += -lavcodec -lavdevice -lavformat -lavutil -lswscale
+LIBS += -lavcodec -lavdevice -lavformat -lavutil
 
 #Link with DX libs (Windows)
 win32: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
 
 #Link with libva libs (LINUX)
-linux-g++: LIBS += -lX11 -lva -lva-glx -lva-x11
+linux-g++: LIBS += -lX11 -lva -lva-x11
