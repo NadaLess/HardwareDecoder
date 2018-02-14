@@ -65,7 +65,7 @@ linux-g++: HEADERS += vaapidecoder.h \
 LIBS += -lavcodec -lavdevice -lavformat -lavutil
 
 #Link with DX libs (Windows)
-win32: LIBS += -ldxgi -ldxva2 -ld3d9 -ld3d11
+win32: LIBS += -ldxgi -ldxva2 -ld3d9
 
 #Link with libva libs (LINUX)
 linux-g++: LIBS += -lX11 -lva -lva-x11
