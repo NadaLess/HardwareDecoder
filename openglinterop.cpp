@@ -1,4 +1,5 @@
 #include "openglinterop.h"
+#include <QtGlobal>
 
 #if defined(Q_OS_WIN)
 #include "d3d9interop.h"
