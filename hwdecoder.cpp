@@ -127,6 +127,10 @@ enum AVPixelFormat HWDecoder::getFormat(AVCodecContext *ctx,
     Q_UNUSED(ctx)
     const enum AVPixelFormat *p;
 
+    //nadaless: Try to decode baseline profiles with HW (Android WebRTC Streams)
+    if (ctx->profile == FF_PROFILE_H264_BASELINE)
+        ctx->hwaccel_flags |= AV_HWACCEL_FLAG_ALLOW_PROFILE_MISMATCH;
+
     for (p = pix_fmts; *p != -1; p++) {
         if (*p == m_hwPixFmt)
             return *p;
