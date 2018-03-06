@@ -10,6 +10,7 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavutil/hwcontext.h>
 #include <libavformat/avformat.h>
 }
 
