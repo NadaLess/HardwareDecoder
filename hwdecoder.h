@@ -1,11 +1,6 @@
 #ifndef HWDECODER_H
 #define HWDECODER_H
 
-#include <QObject>
-#include <QFile>
-#include <QFuture>
-
-#include "videosource.h"
 #include "videoframe.h"
 
 extern "C" {
@@ -17,7 +12,6 @@ extern "C" {
 class HWDecoder: public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(VideoSource* source READ getSource WRITE setSource NOTIFY sourceChanged)
 public:
     static enum AVPixelFormat getFormat(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 
@@ -29,15 +23,9 @@ public:
     void close();
     void flush();
 
-    Q_INVOKABLE void decodeVideo(const QUrl & input);
-
-    VideoSource *getSource() const;
-    void setSource(VideoSource *source);
-
-    static QString kSurfaceInteropKey;
+    int decode(AVPacket *packet);
 
 Q_SIGNALS:
-    void sourceChanged();
     void frameDecoded(VideoFramePtr frame);
 
 protected:
@@ -45,9 +33,7 @@ protected:
     static AVPixelFormat m_hwPixFmt;
 
 private:
-    int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
-    int decode(AVCodecContext *avctx, AVPacket *packet);
-    void processFile(const QString & input);
+    int initHWContext(const enum AVHWDeviceType m_type);
     void sendFrame(VideoFrame * frame);
 
     virtual VideoFrame* createHWVideoFrame(const AVFrame * frame) = 0;
@@ -57,15 +43,10 @@ private:
     AVHWDeviceType m_type;
     AVBufferRef *m_hwDeviceCtx;
 
-    AVCodec *m_decoder;
-    AVFormatContext *m_inputCtx;
-
-    VideoSource* m_source;
-    QFuture<void> m_processFuture;
-
+    AVCodec *m_decoder;    
 };
 
-struct ScopedAVFrameDeleter
+struct AVFrameDeleter
 {
     static inline void cleanup(void *pointer) {
         if (pointer)
@@ -73,11 +54,19 @@ struct ScopedAVFrameDeleter
     }
 };
 
-struct ScopedAVPacketDeleter
+struct AVPacketDeleter
 {
     static inline void cleanup(void *pointer) {
         if (pointer)
             av_packet_unref((AVPacket*)pointer);
+    }
+};
+
+struct AVFormatContextDeleter
+{
+    static inline void cleanup(void *pointer) {
+        if (pointer)
+            avformat_close_input((AVFormatContext**)&pointer);
     }
 };
 

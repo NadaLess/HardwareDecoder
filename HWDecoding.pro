@@ -21,7 +21,8 @@ SOURCES += main.cpp \
     videoframe.cpp \
     surface.cpp \
     yuv2rgb.cpp \
-    openglinterop.cpp
+    openglinterop.cpp \
+    fileprocessor.cpp
 
 win32: SOURCES += d3d9decoder.cpp \
                   d3d9interop.cpp \
@@ -52,7 +53,8 @@ HEADERS += \
     videoframe.h \
     surface.h \
     yuv2rgb.h \
-    openglinterop.h
+    openglinterop.h \
+    fileprocessor.h
 
 win32: HEADERS += d3d9decoder.h \
                   d3d9interop.h \

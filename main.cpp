@@ -1,6 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include "hwdecoderfactory.h"
+#include "fileprocessor.h"
 #include "videorenderer.h"
 #include "openglinterop.h"
 
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     qmlRegisterUncreatableType<VideoSource>("VideoHW", 0, 1, "VideoSource", "C++ Created");
-    qmlRegisterSingletonType<HWDecoder>("VideoHW", 0, 1, "HWDecoder", hwDecoderInstance);
+    qmlRegisterSingletonType<FileProcessor>("VideoHW", 0, 1, "FileProcessor", FileProcessorInstance);
     qmlRegisterType<VideoFBORenderer>("VideoHW", 0, 1, "VideoRenderer");
 
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));

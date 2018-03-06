@@ -1,40 +1,31 @@
 #include "hwdecoder.h"
-
-extern "C" {
-#include <libavutil/pixdesc.h>
-#include <libavutil/hwcontext.h>
-#include <libavutil/opt.h>
-#include <libavutil/avassert.h>
-#include <libavutil/imgutils.h>
-}
-
-#include <QByteArray>
-#include <QtConcurrent/QtConcurrent>
 #include <QDebug>
 
-QString HWDecoder::kSurfaceInteropKey = "surface_interop";
 AVPixelFormat HWDecoder::m_hwPixFmt = AV_PIX_FMT_NONE;
 
 HWDecoder::HWDecoder(QObject * parent)
-    : QObject(parent), m_type(AV_HWDEVICE_TYPE_NONE),
-      m_hwDeviceCtx(nullptr), m_decoder(nullptr),
-      m_inputCtx(nullptr), m_decoderCtx(nullptr)
+    : QObject(parent),
+      m_type(AV_HWDEVICE_TYPE_NONE),
+      m_hwDeviceCtx(nullptr),
+      m_decoder(nullptr),
+      m_decoderCtx(nullptr)
 {
     av_register_all();
-    m_source = new VideoSource(this);
-    connect(this, &HWDecoder::frameDecoded, m_source, &VideoSource::setFrame);
 }
 
 HWDecoder::~HWDecoder()
 {
-    disconnect(m_source);
-    m_processFuture.waitForFinished();
     flush();
     close();
 }
 
 bool HWDecoder::init(AVCodecParameters* codecParameters)
 {
+    if (!codecParameters) return false;
+
+    m_decoder = avcodec_find_decoder(codecParameters->codec_id);
+    if (!m_decoder) return false;
+
     m_type = av_hwdevice_find_type_by_name(m_deviceName.toStdString().c_str());
     if (m_type == AV_HWDEVICE_TYPE_NONE) {
         qWarning() << "Device type" << m_deviceName << "is not supported.";
@@ -52,15 +43,15 @@ bool HWDecoder::init(AVCodecParameters* codecParameters)
         return false;
 
     m_decoderCtx->get_format  = getFormat;
-    av_opt_set_int(m_decoderCtx, "refcounted_frames", 1, 0);
+    m_decoderCtx->refcounted_frames = 1;
 
-    if (initHWContext(m_decoderCtx, m_type) < 0)
+    if (initHWContext(m_type) < 0)
         return false;
 
     return true;
 }
 
-int HWDecoder::initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType type)
+int HWDecoder::initHWContext(const enum AVHWDeviceType type)
 {
     int err = 0;
 
@@ -69,7 +60,7 @@ int HWDecoder::initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType type
         qWarning() << "Failed to create specified HW device.";
         return err;
     }
-    ctx->hw_device_ctx = av_buffer_ref(m_hwDeviceCtx);
+    m_decoderCtx->hw_device_ctx = av_buffer_ref(m_hwDeviceCtx);
 
     return err;
 }
@@ -88,21 +79,18 @@ bool HWDecoder::open()
 
 void HWDecoder::close()
 {
-    //TODO: Clear frames
     avcodec_free_context(&m_decoderCtx);
-    avformat_close_input(&m_inputCtx);
     av_buffer_unref(&m_hwDeviceCtx);
 
     m_decoderCtx = nullptr;
-    m_inputCtx = nullptr;
     m_hwDeviceCtx = nullptr;
 }
 
 void HWDecoder::flush()
 {
     if (m_decoderCtx) {
-        QScopedPointer<AVPacket, ScopedAVPacketDeleter> packet(av_packet_alloc());
-        decode(m_decoderCtx, packet.data());
+        QScopedPointer<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
+        decode(packet.data());
     }
 }
 
@@ -125,16 +113,16 @@ enum AVPixelFormat HWDecoder::getFormat(AVCodecContext *ctx,
     return AV_PIX_FMT_NONE;
 }
 
-int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
+int HWDecoder::decode(AVPacket *packet)
 {
 
-    int ret = avcodec_send_packet(avctx, packet);
+    int ret = avcodec_send_packet(m_decoderCtx, packet);
     if (ret < 0) {
         qWarning() << "Error during decoding";
         return ret;
     }
 
-    QScopedPointer<AVFrame, ScopedAVFrameDeleter> frame;
+    QScopedPointer<AVFrame, AVFrameDeleter> frame;
     while (ret >= 0) {
         frame.reset(av_frame_alloc());
 
@@ -143,13 +131,12 @@ int HWDecoder::decode(AVCodecContext *avctx, AVPacket *packet)
             return AVERROR(ENOMEM);
         }
 
-        ret = avcodec_receive_frame(avctx, frame.data());
+        ret = avcodec_receive_frame(m_decoderCtx, frame.data());
         if (ret == AVERROR(EAGAIN)) {
             return 0;
         } else if (ret < 0) {
             switch(ret) {
-                case AVERROR_EOF:
-                    qWarning() << "File ended";
+                case AVERROR_EOF:                    
                     sendFrame(new VideoFrame());
                     break;
                 default:
@@ -179,79 +166,8 @@ VideoFrame* HWDecoder::createSWVideoFrame(const AVFrame *frame)
     return new VideoFrame();
 }
 
-void HWDecoder::processFile(const QString & input)
-{
-    int video_stream, ret;
-    AVPacket packet;
-
-    /* open the input file */
-    if (avformat_open_input(&m_inputCtx, input.toStdString().c_str(), NULL, NULL) != 0) {
-        qWarning() << "Cannot open input file" << input;
-        return;
-    }
-
-    if (avformat_find_stream_info(m_inputCtx, NULL) < 0) {
-        qWarning() << "Cannot find input stream information.";
-        return;
-    }
-
-    /* find the video stream information */
-    ret = av_find_best_stream(m_inputCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &m_decoder, 0);
-    if (ret < 0) {
-        qWarning() << "Cannot find a video stream in the input file";
-        return;
-    }
-    video_stream = ret;
-    AVCodecParameters* codecParameters = m_inputCtx->streams[video_stream]->codecpar;
-
-    if (!init(codecParameters)) {
-        return;
-    }
-
-    if (!open()) {
-        return;
-    }
-
-    //Decoding loop
-    while (ret >= 0) {
-        if ((ret = av_read_frame(m_inputCtx, &packet)) < 0)
-            break;
-
-        if (video_stream == packet.stream_index)
-            ret = decode(m_decoderCtx, &packet);
-
-        av_packet_unref(&packet);
-    }
-
-    sendFrame(new VideoFrame());
-
-    flush();
-    close();
-}
-
-void HWDecoder::decodeVideo(const QUrl &input)
-{
-    if (!m_processFuture.isRunning()) {
-        //Call processFile in another thread
-        QtConcurrent::run(this, &HWDecoder::processFile, input.toLocalFile());
-    }
-}
-
 void HWDecoder::sendFrame(VideoFrame *frame)
 {
     VideoFramePtr sharedFrame(frame);
     Q_EMIT frameDecoded(sharedFrame);
-}
-
-VideoSource *HWDecoder::getSource() const
-{
-    return m_source;
-}
-
-void HWDecoder::setSource(VideoSource *source)
-{
-    if (m_source != source) {
-        m_source = source;
-        Q_EMIT sourceChanged();
-    }
 }

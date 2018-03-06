@@ -21,7 +21,7 @@ Window {
             anchors.margins: 10
             Layout.fillHeight: true
 
-            source: HWDecoder.source
+            source: FileProcessor.source
         }
 
         RowLayout {
@@ -42,9 +42,14 @@ Window {
         Button {
             id: decodeBtn
             Layout.alignment: Qt.AlignHCenter
-            text: 'Decode'
+            text: FileProcessor.processing? 'Stop' : 'Start'
 
-            onClicked: HWDecoder.decodeVideo(inputStr.text)
+            onClicked: {
+                if (FileProcessor.processing)
+                    FileProcessor.stopProcess();
+                else
+                    FileProcessor.processMedia(openDialog.fileUrl);
+            }
         }
     }
 
