@@ -225,8 +225,6 @@ void HWDecoder::processFile(const QString & input)
 
     sendFrame(new VideoFrame());
 
-    QThread::msleep(50);
-
     flush();
     close();
 }

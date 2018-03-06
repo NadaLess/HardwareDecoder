@@ -47,7 +47,6 @@ protected:
 private:
     int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
     int decode(AVCodecContext *avctx, AVPacket *packet);
-    void processStream(const QIODevice * buffer);
     void processFile(const QString & input);
     void sendFrame(VideoFrame * frame);
 
