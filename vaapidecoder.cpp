@@ -8,6 +8,7 @@ extern "C" {
 VAAPIDecoder::VAAPIDecoder(QObject * parent) : HWDecoder(parent)
 {
     m_deviceName = "vaapi";
+    m_hwPixFmt = AV_PIX_FMT_VAAPI_VLD;
 }
 
 VideoFrame* VAAPIDecoder::createHWVideoFrame(const AVFrame *frame)

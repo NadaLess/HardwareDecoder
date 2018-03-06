@@ -44,21 +44,6 @@ bool HWDecoder::init(AVCodecParameters* codecParameters)
         return false;
     }
 
-    for (int i = 0;; i++) {
-        const AVCodecHWConfig *config = avcodec_get_hw_config(m_decoder, i);
-        if (!config) {
-            qWarning() << "Decoder" << QString::fromStdString(m_decoder->name)
-                       << "does not support device type"
-                       << QString::fromStdString(av_hwdevice_get_type_name(m_type));
-            return false;
-        }
-        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX &&
-                config->device_type == m_type) {
-            m_hwPixFmt = config->pix_fmt;
-            break;
-        }
-    }
-
     if (!(m_decoderCtx = avcodec_alloc_context3(m_decoder))) {
         return false;
     }

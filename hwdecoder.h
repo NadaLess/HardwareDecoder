@@ -41,7 +41,7 @@ Q_SIGNALS:
 
 protected:
     QString m_deviceName;
-    AVCodecContext *m_decoderCtx;
+    static AVPixelFormat m_hwPixFmt;
 
 private:
     int initHWContext(AVCodecContext *ctx, const enum AVHWDeviceType m_type);
@@ -53,9 +53,9 @@ private:
     virtual VideoFrame* createHWVideoFrame(const AVFrame * frame) = 0;
     VideoFrame* createSWVideoFrame(const AVFrame *frame);
 
+    AVCodecContext *m_decoderCtx;
     AVHWDeviceType m_type;
     AVBufferRef *m_hwDeviceCtx;
-    static AVPixelFormat m_hwPixFmt;
 
     AVCodec *m_decoder;
     AVFormatContext *m_inputCtx;

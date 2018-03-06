@@ -5,6 +5,7 @@
 D3D9Decoder::D3D9Decoder(QObject * parent) : HWDecoder(parent)
 {
     m_deviceName = "dxva2";
+    m_hwPixFmt = AV_PIX_FMT_DXVA2_VLD;
 }
 
 VideoFrame* D3D9Decoder::createHWVideoFrame(const AVFrame *frame)
